@@ -15,7 +15,7 @@ roots_path = 'Data/roots.csv'
 def main():
     if not path.exists(par_path):  # generate dataset if needed
         # TODO: add one root, no roots. deal with loss function
-        with open(par_path, 'w', encoding='UTF8') as p, open('Data/roots.csv', 'w', encoding='UTF8') as r:
+        with open(par_path, 'w', encoding='UTF8') as p, open(roots_path, 'w', encoding='UTF8') as r:
             writer_r = csv.writer(r)
             writer_r.writerow(header_r)
             writer_p = csv.writer(p)
@@ -44,10 +44,10 @@ def main():
 
     # Prepare the data
     # with open(par_path, 'w', encoding='UTF8') as p, open('Data/roots.csv', 'w', encoding='UTF8') as r:
-    #     input_reader = csv.reader(p)
-    #     output_reader = csv.reader(r)
     inputs_file = torch.from_numpy(np.loadtxt(par_path, dtype=np.float32, delimiter=",", skiprows=1))
     outputs_file = torch.from_numpy(np.loadtxt(roots_path, dtype=np.float32, delimiter=",", skiprows=1))
+    inputs_file.unsqueeze(0)
+    inputs_file.unsqueeze(1)
     print(inputs_file)
     print(outputs_file)
 
