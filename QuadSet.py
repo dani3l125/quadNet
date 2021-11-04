@@ -3,6 +3,7 @@ import os.path as path
 import csv
 import numpy as np
 import random
+import torch
 
 r_min = -10000.0
 r_max = 10000.0
@@ -16,10 +17,11 @@ class Quadset(Dataset):
         self.samples, self.annotations = self.genData(size)
 
     def __len__(self):
-        return self.samples.size(dim=0)
+        len(self.samples)
+        return len(self.samples)
 
     def __getitem__(self, idx):
-        return {'parameters': self.samples[idx], 'roots': self.annotations[idx]}
+        return [self.samples[idx], self.annotations[idx]]
 
     def genData(self, size=100000):
         if not path.exists(par_path):  # generate dataset if needed
@@ -49,4 +51,4 @@ class Quadset(Dataset):
             inputs.unsqueeze(1)
             outputs.unsqueeze(0)
             outputs.unsqueeze(1)
-            return inputs, outputs
+            return inputs.unsqueeze(dim=1), outputs.unsqueeze(dim=1)

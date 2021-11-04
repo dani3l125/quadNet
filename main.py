@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import torchvision.models as models
 import QuadSet as Dataset
 import matplotlib.pyplot as plt
+import DeviceDataLoader as DDL
 
 r_min = -10000.0
 r_max = 10000.0
@@ -23,25 +24,11 @@ opt_func = torch.optim.Adam
 loss_func = torch.nn.PairwiseDistance()
 
 
-def get_default_device():
-    """Pick GPU if available, else CPU"""
-    if torch.cuda.is_available():
-        return torch.device('cuda')
-    else:
-        return torch.device('cpu')
-
-
-def to_device(data, device):
-    """Move tensor(s) to chosen device"""
-    if isinstance(data, (list, tuple)):
-        return [to_device(x, device) for x in data]
-    return data.to(device, non_blocking=True)
-
-
 def training_step(net, batch):
     parameters, roots = batch
-    out = net(parameters)  # Generate predictions
-    loss = loss_func(out, roots)  # Calculate loss
+    print("here")
+    out = net(parameters)[0]  # Generate predictions
+    loss = loss_func(torch.tensor(out), roots)  # Calculate loss
     return loss
 
 
@@ -62,22 +49,22 @@ def validation_epoch_end(net, outputs):
 
 
 def evaluate(model, val_loader):
-    with torch.mo_grad():
+    with torch.no_grad():
         model.eval()
         outputs = [model.validation_step(batch) for batch in val_loader]
     return model.validation_epoch_end(outputs)
 
 
 # TODO: add lr scheduler
-def train(epochs, lr, model, train_loader, val_loader, opt_func=torch.optim.SGD):
+def train(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD):
     history = []
-    optimizer = opt_func(model.parameters(), lr)
+    optimizer = opt_f(model.parameters(), lr)
     for epoch in range(epochs):
         # Training Phase
         model.train()
         train_losses = []
         for batch in train_loader:
-            loss = model.training_step(batch)
+            loss = training_step(model, batch)
             train_losses.append(loss)
             loss.backward()
             optimizer.step()
@@ -129,16 +116,23 @@ def main():
                                          pin_memory=False
                                          )
 
+    device = DDL.get_default_device()
+
+    train_dl = DDL.DeviceDataLoader(train_dl, device)
+    val_dl = DDL.DeviceDataLoader(val_dl, device)
+
     # Initialize model
     model = torch.nn.LSTM(input_size=3,
                           hidden_size=4,
                           num_layers=10
                           )
 
-    device = get_default_device()
+    DDL.to_device(model, device)
 
     history = train(num_epochs, lr, model, train_dl, val_dl, opt_func)
     plot_accuracies(history)
+
+    torch.save(model.state_dict(), 'lstm_quadratic.pth')
 
 
 if __name__ == "__main__":
