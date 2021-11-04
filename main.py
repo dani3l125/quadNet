@@ -3,54 +3,143 @@ import csv
 import os.path as path
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 import torchvision.models as models
+import QuadSet as Dataset
+import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
+data_size = 100000
+val_size = 20000
 header_p = ['a', 'b', 'c']
-header_r = ['root1', 'root2']
+header_r = ['exist1', 'root1', 'exist2', 'root2']
 par_path = 'Data/parameters.csv'
 roots_path = 'Data/roots.csv'
+# Hyperparams, loss, optimizer:
+num_epochs = 10
+lr = 0.001
+opt_func = torch.optim.Adam
+loss_func = torch.nn.PairwiseDistance()
+
+
+def get_default_device():
+    """Pick GPU if available, else CPU"""
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    else:
+        return torch.device('cpu')
+
+
+def to_device(data, device):
+    """Move tensor(s) to chosen device"""
+    if isinstance(data, (list, tuple)):
+        return [to_device(x, device) for x in data]
+    return data.to(device, non_blocking=True)
+
+
+def training_step(net, batch):
+    parameters, roots = batch
+    out = net(parameters)  # Generate predictions
+    loss = loss_func(out, roots)  # Calculate loss
+    return loss
+
+
+def validation_step(net, batch):
+    parameters, roots = batch
+    out = net(parameters)  # Generate predictions
+    loss = loss_func(out, roots)  # Calculate loss
+    acc = accuracy(out, roots)  # Calculate accuracy
+    return {'val_loss': loss.detach(), 'val_acc': acc}
+
+
+def validation_epoch_end(net, outputs):
+    batch_losses = [x['val_loss'] for x in outputs]
+    epoch_loss = torch.stack(batch_losses).mean()  # Combine losses
+    batch_accs = [x['val_acc'] for x in outputs]
+    epoch_acc = torch.stack(batch_accs).mean()  # Combine accuracies
+    return {'val_loss': epoch_loss.item(), 'val_acc': epoch_acc.item()}
+
+
+def evaluate(model, val_loader):
+    with torch.mo_grad():
+        model.eval()
+        outputs = [model.validation_step(batch) for batch in val_loader]
+    return model.validation_epoch_end(outputs)
+
+
+# TODO: add lr scheduler
+def train(epochs, lr, model, train_loader, val_loader, opt_func=torch.optim.SGD):
+    history = []
+    optimizer = opt_func(model.parameters(), lr)
+    for epoch in range(epochs):
+        # Training Phase
+        model.train()
+        train_losses = []
+        for batch in train_loader:
+            loss = model.training_step(batch)
+            train_losses.append(loss)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+        # Validation phase
+        result = evaluate(model, val_loader)
+        result['train_loss'] = torch.stack(train_losses).mean().item()
+        model.epoch_end(epoch, result)
+        history.append(result)
+    return history
+
+
+def epoch_end(net, epoch, result):
+    print("Epoch [{}], train_loss: {:.4f}, val_loss: {:.4f}, val_acc: {:.4f}".format(
+        epoch, result['train_loss'], result['val_loss'], result['val_acc']))
+
+
+def accuracy(outputs, labels):
+    _, preds = torch.max(outputs, dim=1)
+    return torch.tensor(torch.sum(preds == labels).item() / len(preds))
+
+
+def plot_accuracies(history):
+    accuracies = [x['val_acc'] for x in history]
+    plt.plot(accuracies, '-x')
+    plt.xlabel('epoch')
+    plt.ylabel('accuracy')
+    plt.title('Accuracy vs. No. of epochs')
+
 
 def main():
-    if not path.exists(par_path):  # generate dataset if needed
-        # TODO: add one root, no roots. deal with loss function
-        with open(par_path, 'w', encoding='UTF8') as p, open(roots_path, 'w', encoding='UTF8') as r:
-            writer_r = csv.writer(r)
-            writer_r.writerow(header_r)
-            writer_p = csv.writer(p)
-            writer_p.writerow(header_p)
-            for i in range(1000000):
-                r1 = random.uniform(r_min, r_max)
-                r2 = random.uniform(r_min, r_max)
-                if r1 > r2:  # assuming ordered roots
-                    temp = r1
-                    r1 = r2
-                    r2 = temp
-                a = 1
-                b = r1 + r2
-                c = r1 * r2
-                if random.getrandbits(1):  # possible to remove 'if'
-                    a = random.uniform(r_min, r_max)
-                    b *= a
-                    c *= a
-                writer_r.writerow([r1, r2])
-                writer_p.writerow([a, b, c])
+    # Initialize dataset
+    dataset = Dataset.Quadset()
 
-    #TODO: visualize with pandas
+    train_ds, val_ds = torch.utils.data.random_split(dataset, (data_size - val_size, val_size))
 
-    # Create network
-    net = models.resnet18()  #TODO find best model
+    # Initialize data loaders
+    train_dl = torch.utils.data.DataLoader(train_ds,
+                                           batch_size=256,
+                                           shuffle=True,
+                                           num_workers=4,
+                                           pin_memory=False
+                                           )
 
-    # Prepare the data
-    # with open(par_path, 'w', encoding='UTF8') as p, open('Data/roots.csv', 'w', encoding='UTF8') as r:
-    inputs_file = torch.from_numpy(np.loadtxt(par_path, dtype=np.float32, delimiter=",", skiprows=1))
-    outputs_file = torch.from_numpy(np.loadtxt(roots_path, dtype=np.float32, delimiter=",", skiprows=1))
-    inputs_file.unsqueeze(0)
-    inputs_file.unsqueeze(1)
-    print(inputs_file)
-    print(outputs_file)
+    val_dl = torch.utils.data.DataLoader(val_ds,
+                                         batch_size=256,
+                                         shuffle=True,
+                                         num_workers=4,
+                                         pin_memory=False
+                                         )
+
+    # Initialize model
+    model = torch.nn.LSTM(input_size=3,
+                          hidden_size=4,
+                          num_layers=10
+                          )
+
+    device = get_default_device()
+
+    history = train(num_epochs, lr, model, train_dl, val_dl, opt_func)
+    plot_accuracies(history)
+
 
 if __name__ == "__main__":
     main()
-
