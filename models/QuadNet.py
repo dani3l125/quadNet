@@ -25,6 +25,9 @@ class QuadNet(nn.Module):
         parameters, labels = batch
         labels1, labels2 = labels.split(2, dim=2)
         out1, out2 = self(parameters).split(2, dim=2)  # Generate predictions
+        out1 = (out1.sign() + 1) / 2  # TODO: Deal with zeros.
+        out2 = out2 * out1
+        labels2 = labels2 * out1 # zeroing unrelevant roots
         loss1 = F.cross_entropy(out1, labels1)  # Calculate loss
         loss2 = F.mse_loss(out2, labels2)
         return loss1, loss2

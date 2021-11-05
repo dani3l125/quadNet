@@ -46,7 +46,7 @@ class Quadset(Dataset):
                     if np.isreal(r):
                         roots.append(float(1))
                     else:
-                        roots.append(float(0))
+                        roots.append(float(-1))
                 for r in root_l:
                     roots.append(np.real(r))
                 writer_r.writerow(roots)
