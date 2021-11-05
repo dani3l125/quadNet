@@ -4,23 +4,31 @@ import torch
 class MnistModel(nn.Module):
     def __init__(self, input_size, output_size):
         super().__init__()
-        self.linear = nn.Linear(input_size, num_classes)
+        self.network = nn.Sequential(
+            nn.Linear(input_size, input_size*2),
+            nn.reLU(),
+            nn.Linear(input_size*2, input_size * 4),
+            nn.reLU(),
+            nn.Linear(input_size * 4, output_size * 2),
+            nn.reLU(),
+            nn.Linear(output_size*2, output_size)
+        )
 
-    def forward(self, xb):
-        xb = xb.reshape(-1, 784)
-        out = self.linear(xb)
-        return out
+    def forward(self, input):
+        out = self.network(input)
+        return out.reshape(2, 2)
 
     def training_step(self, batch):
         images, labels = batch
         out = self(images)  # Generate predictions
-        loss = F.cross_entropy(out, labels)  # Calculate loss
-        return loss
+        loss1 = nn.functional.cross_entropy(out, labels)  # Calculate loss
+        loss2 = nn.functional.
+        return loss1 + loss2
 
     def validation_step(self, batch):
         images, labels = batch
         out = self(images)  # Generate predictions
-        loss = F.cross_entropy(out, labels)  # Calculate loss
+        loss2 = nn.functional.cross_entropy(out, labels)  # Calculate loss
         acc = accuracy(out, labels)  # Calculate accuracy
         return {'val_loss': loss.detach(), 'val_acc': acc.detach()}
 

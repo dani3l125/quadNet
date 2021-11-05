@@ -26,9 +26,9 @@ loss_func = torch.nn.PairwiseDistance()
 
 def training_step(net, batch):
     parameters, roots = batch
-    print("here")
-    out = net(parameters)[0]  # Generate predictions
-    loss = loss_func(torch.tensor(out), roots)  # Calculate loss
+    out = net(parameters)
+    out = torch.reshape(out, (2, 2))# Generate predictions
+    loss = func(out[0], roots)  # Calculate loss
     return loss
 
 
