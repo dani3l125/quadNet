@@ -9,7 +9,7 @@ r_max = 10000.0
 data_size = 100000
 val_size = 20000
 # Hyperparams, optimizer:
-num_epochs = 10000
+num_epochs = 20
 lr = 0.01
 batch_size = 1024
 opt_func = torch.optim.Adam
@@ -40,7 +40,7 @@ def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD):
         result['train_loss'] = torch.stack(train_losses).mean().item()
         model.epoch_end(epoch, result)
         history.append(result)
-        if epoch % 50 == 0:
+        if epoch % 10 == 0:
             # save the model
             torch.save(model.state_dict(), 'QuadNet.pth')
     return history

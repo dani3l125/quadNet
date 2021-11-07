@@ -16,6 +16,8 @@ class QuadNet(nn.Module):
             nn.ReLU(),
             nn.Linear(output_size*4, output_size)
         )
+        self.loss1 = nn.CrossEntropyLoss()
+        self.loss2 = nn.MSELoss()
 
     def forward(self, input):
         out = self.network(input)
@@ -27,9 +29,9 @@ class QuadNet(nn.Module):
         out1, out2 = self(parameters).split(2, dim=2)  # Generate predictions
         out1 = (out1.sign() + 1) / 2  # TODO: Deal with zeros.
         out2 = out2 * out1
-        labels2 = labels2 * out1 # zeroing unrelevant roots
-        loss1 = F.cross_entropy(out1, labels1)  # Calculate loss
-        loss2 = F.mse_loss(out2, labels2)
+        labels2 = labels2 * out1  # zeroing unrelevant roots
+        loss1 = 10000 * self.loss1(out1, labels1)  # Calculate loss
+        loss2 = self.loss2(out2, labels2)
         return loss1, loss2
 
     def training_step(self, batch):
