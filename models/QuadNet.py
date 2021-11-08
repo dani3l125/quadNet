@@ -34,7 +34,9 @@ class QuadNet(nn.Module):
         # loss1 = self.loss1(out1, labels1)  # Calculate loss
         # loss2 = self.loss2(out2, labels2)
         # return loss1, loss2
-        out = self(parameters).unsqueeze(dim=1) 
+        out = self(parameters).squeeze()
+
+        labels = labels.type(torch.LongTensor)
         return self.loss1(out, labels)
 
     def training_step(self, batch):

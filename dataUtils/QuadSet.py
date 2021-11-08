@@ -11,8 +11,8 @@ r_min = -10000.0
 r_max = 10000.0
 header_p = ['a', 'b', 'c']
 header_r = ['class']
-par_path = 'C:/Users/user/Documents/GitHub/quadNet/data/parameters.csv'
-roots_path = 'C:/Users/user/Documents/GitHub/quadNet/data/roots.csv'
+par_path = '../data/parameters.csv'
+roots_path = '../data/roots.csv'
 
 class Quadset(Dataset):
     def __init__(self, size=100000):
@@ -62,8 +62,4 @@ class Quadset(Dataset):
                 writer_p.writerow(par_l)
         inputs = torch.from_numpy(np.loadtxt(par_path, dtype=np.float32, delimiter=",", skiprows=1))
         outputs = torch.from_numpy(np.loadtxt(roots_path, dtype=np.float32, delimiter=",", skiprows=1))
-        inputs.unsqueeze(0)
-        inputs.unsqueeze(1)
-        outputs.unsqueeze(0)
-        outputs.unsqueeze(1)
-        return inputs.unsqueeze(dim=1), outputs.unsqueeze(dim=1)
+        return inputs.unsqueeze(dim=1), outputs
