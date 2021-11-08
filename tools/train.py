@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = 100000
-val_size = 20000
+data_size = int(10e+5)
+val_size = int(2 * 10e+4)
 # Hyperparams, optimizer:
 num_epochs = 20
 lr = 0.01
@@ -63,7 +63,7 @@ def plot_accuracies(history):
 
 def train():
     # Initialize dataUtils
-    dataset = Dataset.Quadset()
+    dataset = Dataset.Quadset(data_size)
 
     train_ds, val_ds = torch.utils.data.random_split(dataset, (data_size - val_size, val_size))
 
