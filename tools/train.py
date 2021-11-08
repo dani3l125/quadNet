@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = int(10e+7)
-val_size = int(2 * 10e+6)
+data_size = int(10e+5)
+val_size = int(2 * 10e+4)
 # Hyperparams, optimizer:
-num_epochs = 20
+num_epochs = 200
 lr = 0.01
 batch_size = 16 * 1024
 opt_func = torch.optim.Adam
@@ -84,7 +84,7 @@ def train():
 
     # Initialize model
     model = QuadNet(input_size=3,
-                    output_size=4,
+                    output_size=3,
                     )
 
     # use GPU only if available
