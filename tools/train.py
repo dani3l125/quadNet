@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = int(10e+2)
-val_size = int(2 * 10e+1)
+data_size = int(10e+7)
+val_size = int(2 * 10e+6)
 # Hyperparams, optimizer:
 num_epochs = 20
 lr = 0.01
-batch_size = 1024
+batch_size = 16 * 1024
 opt_func = torch.optim.Adam
 
 def evaluate(model, val_loader):
