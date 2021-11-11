@@ -13,7 +13,7 @@ def test():
     # c = float(input("enter c:"))
     a = 1.
     b = 36.
-    c = 1000.
+    c = 10.
     par_l = [a, b, c]
     root_l = np.roots(par_l)
     if np.isreal(root_l[0]) and np.isreal(root_l[1]):
@@ -31,7 +31,7 @@ def test():
 
 def get_pretrained():  # initialize and load
     model = QuadNet(input_size=3,
-                    output_size=4,
+                    output_size=3,
                     )
     model.load_state_dict(torch.load("QuadNet.pth"))
     return model

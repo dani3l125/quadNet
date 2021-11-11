@@ -6,13 +6,14 @@ import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = int(10e+5)
-val_size = int(2 * 10e+4)
+data_size = int(3 * 10e+6)
+val_size = int(6 * 10e+4)
 # Hyperparams, optimizer:
-num_epochs = 200
+num_epochs = 2800
 lr = 0.01
 batch_size = 16 * 1024
 opt_func = torch.optim.Adam
+schedule_func = torch.optim.lr_scheduler.StepLR
 
 def evaluate(model, val_loader):
     with torch.no_grad():
@@ -22,9 +23,10 @@ def evaluate(model, val_loader):
 
 
 # TODO: add lr scheduler
-def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD):
+def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD, schedule_func=torch.optim.lr_scheduler.StepLR):
     history = []
     optimizer = opt_f(model.parameters(), lr)
+    scheduler = schedule_func(optimizer, 400)
     for epoch in range(epochs):
         # Training Phase
         model.train()
@@ -34,15 +36,16 @@ def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD):
             train_losses.append(loss)
             loss.backward()
             optimizer.step()
+            scheduler.step()
             optimizer.zero_grad()
         # Validation phase
         result = evaluate(model, val_loader)
         result['train_loss'] = torch.stack(train_losses).mean().item()
         model.epoch_end(epoch, result)
         history.append(result)
-        if epoch % 10 == 0:
+        if epoch % 50 == 0:
             # save the model
-            torch.save(model.state_dict(), 'QuadNet.pth')
+            torch.save(model.state_dict(), 'QuadNet_ep' + str(epoch) + '.pth')
     return history
 
 
@@ -94,7 +97,7 @@ def train():
     DDL.to_device(model, device)
 
     # Perform training and visualize result
-    history = fit(num_epochs, lr, model, train_dl, val_dl, opt_func)
+    history = fit(num_epochs, lr, model, train_dl, val_dl, opt_func, schedule_func)
     plot_accuracies(history)
 
     # save the model
