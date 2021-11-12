@@ -2,19 +2,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
+
 class QuadNet(nn.Module):
     def __init__(self, input_size, output_size):
         super().__init__()
+        sizeoflayer = 60
         self.network = nn.Sequential(
-            nn.Linear(input_size, input_size*2),
+            nn.Linear(input_size, sizeoflayer),
             nn.ReLU(),
-            nn.Linear(input_size*2, input_size * 4),
+            nn.Linear(sizeoflayer, sizeoflayer),
             nn.ReLU(),
-            nn.Linear(input_size * 4, input_size * 8),
+            nn.Linear(sizeoflayer, sizeoflayer),
             nn.ReLU(),
-            nn.Linear(input_size * 8, output_size * 4),
+            nn.Linear(sizeoflayer, 10),
             nn.ReLU(),
-            nn.Linear(output_size*4, output_size),
+            nn.Linear(10, output_size),
             # nn.Softmax()  # probabilities output
         )
         self.loss1 = nn.CrossEntropyLoss()
@@ -26,36 +28,37 @@ class QuadNet(nn.Module):
 
     def get_losses(self, batch):
         parameters, labels = batch
-        # labels1, labels2 = labels.split(2, dim=2)
-        # out1, out2 = self(parameters).split(2, dim=2)  # Generate predictions
-        # out1 = (out1.sign() + 2)  # TODO: Deal with zeros.
-        # out2 = out2 * labels1
-        # labels2 = labels2 * labels1  # zeroing unrelevant roots
-        # loss1 = self.loss1(out1, labels1)  # Calculate loss
-        # loss2 = self.loss2(out2, labels2)
-        # return loss1, loss2
         out = self(parameters).squeeze()
         return self.loss1(out, labels)
 
     def training_step(self, batch):
-        # loss1, loss2 = self.get_losses(batch)
-        # return loss1 + loss2
-        return self.get_losses(batch)
+        parameters, labels = batch
+        out = self(parameters).squeeze()
+        return self.loss1(out, labels)
 
     def validation_step(self, batch):
-        # loss1, loss2 = self.get_losses(batch)
-        # return {'val_entropy_loss': loss1.detach(), 'val_mse': loss2.detach()}
-        loss = self.get_losses(batch)
-        return {'val_entropy_loss': loss.detach()}
+        parameters, labels = batch
+        out = self(parameters).squeeze()
+        loss = self.loss1(out, labels)
+        return {'entropy_loss': loss.detach(), 'accuracy': self.accuracy(out, labels)}
 
-    def validation_epoch_end(self, outputs):
-        batch_losses = [x['val_entropy_loss'] for x in outputs]
-        epoch_loss = torch.stack(batch_losses).mean()  # Combine losses
-        # batch_accs = [x['val_mse'] for x in outputs]
-        # epoch_acc = torch.stack(batch_accs).mean()  # Combine accuracies
-        # return {'val_entropy_loss': epoch_loss.item(), 'val_mse': epoch_acc.item()}
-        return {'val_entropy_loss': epoch_loss.item()}
+    def validation_epoch_end(self, outputs_val, outputs_train):
+        batch_losses_val = [x['entropy_loss'] for x in outputs_val]
+        batch_losses_train = [x['entropy_loss'] for x in outputs_train]
+        batch_acc_val = [x['accuracy'] for x in outputs_val]
+        batch_acc_train = [x['accuracy'] for x in outputs_train]
+        epoch_loss_val = torch.stack(batch_losses_val).mean()  # Combine losses
+        epoch_loss_train = torch.stack(batch_losses_train).mean()  # Combine losses
+        epoch_acc_val = torch.stack(batch_acc_val).mean()  # Combine accuracies
+        epoch_acc_train = torch.stack(batch_acc_train).mean()  # Combine accuracies
+        return {'val_entropy_loss': epoch_loss_val.item(), 'train_entropy_loss': epoch_loss_train.item(),
+                'val_acc': 100 * epoch_acc_val.item(), 'train_acc': 100 * epoch_acc_train.item()}
 
     def epoch_end(self, epoch, result):
-        # print("Epoch [{}], existing roots cross entropy: {:.4f}, roots mean squared error: {:.4f}".format(epoch, result['val_entropy_loss'], result['val_mse']))
-        print("Epoch [{}], existing roots cross entropy: {:.4f}".format(epoch, result['val_entropy_loss']))
+        print("Epoch [{}], validation cross entropy: {:.6f}, training cross entropy: {:.6f}, validation accuracy: {:.2f}, training accuracy: {:.2f}".format(
+                epoch, result['val_entropy_loss'], result['train_entropy_loss'], result['val_acc'], result['train_acc']))
+
+    def accuracy(self, outputs, labels):
+        _, preds = torch.max(outputs, dim=1)
+        print("predictions: ", preds, "Labels: ", labels)
+        return torch.tensor(torch.sum(preds == labels).item() / len(preds))
