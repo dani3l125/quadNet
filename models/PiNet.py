@@ -7,7 +7,7 @@ class PiNet(nn.Module):
         super().__init__()
         self.degrees = range(1, degree+1)
         self.in_size = in_size
-        self.loss = nn.MSELoss
+        self.loss = nn.MSELoss()
         self.out_size = out_size
         self.weights_matrices = [nn.Parameter(torch.rand(out_size, 1, requires_grad=True))]
         cols = 1

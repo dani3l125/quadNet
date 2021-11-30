@@ -29,7 +29,7 @@ class Quadset(Dataset):
         data = pd.read_csv(data_path).dropna().reset_index(drop=True).head(size)
         par = np.array([data.loc[:, headers[0]], data.loc[:, headers[1]], data.loc[:, headers[2]]]).T
         roots = np.array([data.loc[:, headers[3]], data.loc[:, headers[4]]]).T
-        return par, roots
+        return par.astype(np.float32), roots.astype(np.float32)
 
 
 def genData(size=100000):
