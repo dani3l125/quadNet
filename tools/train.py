@@ -12,7 +12,7 @@ val_size = int(2 * 10e+4)  # 6 * 10e+5
 # Hyperparams, optimizer:
 num_epochs = 280
 lr = 0.01
-batch_size = 1024
+batch_size = 1
 degree = 10
 opt_func = torch.optim.Adam
 schedule_func = torch.optim.lr_scheduler.StepLR
