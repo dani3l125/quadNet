@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from dataUtils import QuadSet as Dataset, DeviceDataLoader as DDL
 from dataUtils.QuadSet import *
-from models.QuadNet import QuadNet
+from models.PiNet import PiNet
 import matplotlib.pyplot as plt
 
 r_min = -10000.0
@@ -13,6 +13,7 @@ val_size = int(2 * 10e+4)  # 6 * 10e+5
 num_epochs = 280
 lr = 0.01
 batch_size = 2
+degree = 10
 opt_func = torch.optim.Adam
 schedule_func = torch.optim.lr_scheduler.StepLR
 
@@ -89,8 +90,9 @@ def train():
                                          )
 
     # Initialize model
-    model = QuadNet(input_size=3,
-                    output_size=3,
+    model = PiNet(degree=degree,
+                  in_size=3,
+                    out_size=1,
                     )
 
     # use GPU only if available
