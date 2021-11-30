@@ -10,6 +10,7 @@ class PiNet(nn.Module):
         self.out_size = out_size
         self.weights_matrices = []
         self.bias_matrices = torch.rand(out_size, 1)
+        self.loss = nn.MSELoss
         cols = 1
         for n in self.degrees:
             cols *= in_size
@@ -38,7 +39,7 @@ class PiNet(nn.Module):
         loss = self.loss(out, values)
         return {'mse': loss.detach(), 'accuracy': self.accuracy(out, values)}
 
-    def validation_epoch_end(self, outputs_val, outputs_train):
+    def validation_epoch_end(self, outputs_val):
         batch_losses_val = [x['mse'] for x in outputs_val]
         batch_acc_val = [x['accuracy'] for x in outputs_val]
         epoch_loss_val = torch.stack(batch_losses_val).mean()  # Combine losses
@@ -51,8 +52,7 @@ class PiNet(nn.Module):
                 epoch, result['val_mse'], result['val_acc']))
 
     def accuracy(self, outputs, values):
-        _, preds = torch.max(outputs, dim=1)
-        print("predictions: ", preds, "values: ", values)
-        return torch.tensor(torch.sum(values-1 <= preds <= values+1).item() / len(preds))
+        print("predictions: ", outputs, "values: ", values)
+        return torch.tensor(torch.sum(values[0]-1 <= outputs[0] <= values[0]+1).item() / len(preds))
 
 

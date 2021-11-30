@@ -12,7 +12,7 @@ val_size = int(2 * 10e+4)  # 6 * 10e+5
 # Hyperparams, optimizer:
 num_epochs = 280
 lr = 0.01
-batch_size = 2
+batch_size = 1024
 degree = 10
 opt_func = torch.optim.Adam
 schedule_func = torch.optim.lr_scheduler.StepLR
@@ -21,8 +21,7 @@ def evaluate(model, val_loader, train_loader):
     with torch.no_grad():
         model.eval()
         outputs_val = [model.validation_step(batch) for batch in val_loader]
-        outputs_train = [model.validation_step(batch) for batch in train_loader]
-    return model.validation_epoch_end(outputs_val, outputs_train)
+    return model.validation_epoch_end(outputs_val)
 
 
 # TODO: add lr scheduler
@@ -92,7 +91,7 @@ def train():
     # Initialize model
     model = PiNet(degree=degree,
                   in_size=3,
-                    out_size=1,
+                    out_size=2,
                     )
 
     # use GPU only if available
