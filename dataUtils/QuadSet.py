@@ -26,25 +26,27 @@ class Quadset(Dataset):
         return [self.samples[idx], self.roots[idx]]
 
     def getData(self, size=100000):
-        data = pd.read_csv(path).dropna().reset_index(drop=True).head(size)
-        par = data[:, headers[0:2]]
-        roots = data[:, headers[3:4]]
+        data = pd.read_csv(data_path).dropna().reset_index(drop=True).head(size)
+        par = np.array([data.loc[:, headers[0]], data.loc[:, headers[1]], data.loc[:, headers[2]]]).T
+        roots = np.array([data.loc[:, headers[3]], data.loc[:, headers[4]]]).T
         return par, roots
 
 
 def genData(size=100000):
-    if True or not path.exists(data_path):
-        if path.exists(data_path):
-            os.remove(data_path)
-        with open(data_path, 'w', encoding='UTF8') as data:
-            writer = csv.writer(data)
-            writer.writerow(headers)
-            for i in range(int(size)):
-                a = random.uniform(r_min, r_max)
-                b = random.uniform(r_min, r_max)
-                c = random.uniform(r_min, r_max)
-                par_l = [a, b, c]
-                root_l = np.roots(par_l)
+    if path.exists(data_path):
+        os.remove(data_path)
+    with open(data_path, 'w', encoding='UTF8') as data:
+        writer = csv.writer(data)
+        writer.writerow(headers)
+        i = 0
+        while i in range(int(size)):
+            a = random.uniform(r_min, r_max)
+            b = random.uniform(r_min, r_max)
+            c = random.uniform(r_min, r_max)
+            par_l = [a, b, c]
+            root_l = np.roots(par_l)
+            if np.isreal(root_l[0]) and np.isreal(root_l[1]):
                 writer.writerow(
                     [a, b, c, root_l[0] if np.isreal(root_l[0]) else None,
                      root_l[1] if np.isreal(root_l[1]) else None])
+                i += 1
