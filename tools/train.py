@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from dataUtils import QuadSet as Dataset, DeviceDataLoader as DDL
+from dataUtils.QuadSet import *
 from models.QuadNet import QuadNet
 import matplotlib.pyplot as plt
 
@@ -67,8 +68,8 @@ def plot_accuracies(history):
 
 def train():
     # Initialize dataUtils
-    Dataset.genData()
-    dataset = Dataset.Quadset(data_size)
+    # genData()
+    dataset = Quadset(data_size)
 
     train_ds, val_ds = torch.utils.data.random_split(dataset, (data_size - val_size, val_size))
 
