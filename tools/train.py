@@ -9,7 +9,7 @@ r_max = 10000.0
 data_size = int(10e+5)  # 3 * 10e+6
 val_size = int(2 * 10e+4)  # 6 * 10e+5
 # Hyperparams, optimizer:
-num_epochs = 2800
+num_epochs = 280
 lr = 0.01
 batch_size = 2
 opt_func = torch.optim.Adam
@@ -67,6 +67,7 @@ def plot_accuracies(history):
 
 def train():
     # Initialize dataUtils
+    Dataset.genData()
     dataset = Dataset.Quadset(data_size)
 
     train_ds, val_ds = torch.utils.data.random_split(dataset, (data_size - val_size, val_size))
