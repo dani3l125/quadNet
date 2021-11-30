@@ -1,19 +1,19 @@
 import torch
 from torch.utils.data import DataLoader
-from dataUtils import MyDataSet as Dataset, DeviceDataLoader as DDL
+import dataUtils.DeviceDataLoader as DDL
 from dataUtils.MyDataSet import *
 from models.PiNet import PiNet
 import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = int(10e+3)  # 3 * 10e+6
-val_size = int(2 * 10e+2)  # 6 * 10e+5
+data_size = int(2 * 10e+7)  # 3 * 10e+6
+val_size = int(4 * 10e+6)  # 6 * 10e+5
 # Hyperparams, optimizer:
-num_epochs = 280
-lr = 0.01
-batch_size = 1024
-degree = 10
+num_epochs = 750
+lr = 0.05
+batch_size = 2048
+degree = 15
 opt_func = torch.optim.Adam
 schedule_func = torch.optim.lr_scheduler.StepLR
 
@@ -28,7 +28,7 @@ def evaluate(model, val_loader, train_loader):
 def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD, schedule_func=torch.optim.lr_scheduler.StepLR):
     history = []
     optimizer = opt_f(model.parameters(), lr)
-    scheduler = schedule_func(optimizer, 400)
+    scheduler = schedule_func(optimizer, 75)
     for epoch in range(epochs):
         # Training Phase
         model.train()
@@ -45,7 +45,7 @@ def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD, sche
         result['val_mse'] = torch.stack(train_losses).mean().item()
         model.epoch_end(epoch, result)
         history.append(result)
-        if epoch % 2 == 0:
+        if epoch % 10 == 0:
             # save the model
             torch.save(model.state_dict(), 'QuadNet_ep' + str(epoch) + '.pth')
     return history
@@ -68,7 +68,10 @@ def plot_accuracies(history):
 
 def train():
     # Initialize dataUtils
-    # genData(data_size)
+    print("Creating dataset...")
+    genData(data_size)
+    print("Dataset is created")
+
     dataset = Quadset(data_size)
 
     train_ds, val_ds = torch.utils.data.random_split(dataset, (data_size - val_size, val_size))

@@ -7,11 +7,14 @@ import numpy as np
 import random
 import torch
 import pandas as pd
+from multiprocessing import Process
+import glob
 
 r_min = -10000.0
 r_max = 10000.0
 headers = ['a', 'b', 'c', 'root1', 'root2']
-data_path = os.path.join("Data", "quadratic.csv")
+data_path = os.path.join("Data2", "NewQuadratic.csv")
+n_threads = 20
 
 
 class Quadset(Dataset):
@@ -33,12 +36,30 @@ class Quadset(Dataset):
 
 
 def genData(size=100000):
+    threads = []
     if path.exists(data_path):
         os.remove(data_path)
+    # with open(os.path.join("Data2", "headers.csv"), 'w', encoding='UTF8') as data:
+    #     writer = csv.writer(data)
+    #     writer.writerow(headers)
+    for t in range(n_threads):
+        threads.append(Process(target=subData, args=(int(size/20), t)))
+        threads[t].start()
+    for t in range(n_threads):
+        threads[t].join()
+    all_filenames = glob.glob("Data2" + "/*.csv")
+    # combine all files in the list
+    combined_csv = pd.concat([pd.read_csv(f) for f in all_filenames])
+    # export to csv
     with open(data_path, 'w', encoding='UTF8') as data:
+        combined_csv.to_csv(data_path, index=False, encoding='utf-8-sig')
+
+
+def subData(size, index):
+    i = 0
+    with open(os.path.join("Data2", "quadratic{}.csv".format(index)), 'w', encoding='UTF8') as data:
         writer = csv.writer(data)
         writer.writerow(headers)
-        i = 0
         while i in range(int(size)):
             a = random.uniform(r_min, r_max)
             b = random.uniform(r_min, r_max)
