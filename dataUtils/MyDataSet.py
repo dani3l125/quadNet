@@ -46,8 +46,7 @@ def genData(size=100000):
             par_l = [a, b, c]
             root_l = np.roots(par_l)
             if np.isreal(root_l[0]) and np.isreal(root_l[1]):
-                root_l = root_l.sort()
+                root_l = np.sort(root_l)
                 writer.writerow(
-                    [a, b, c, root_l[0] if np.isreal(root_l[0]) else None,
-                     root_l[1] if np.isreal(root_l[1]) else None])
+                    [a, b, c, root_l[0], root_l[1]])
                 i += 1

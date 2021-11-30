@@ -68,7 +68,7 @@ def plot_accuracies(history):
 
 def train():
     # Initialize dataUtils
-    # genData(data_size)
+    genData(data_size)
     dataset = Quadset(data_size)
 
     train_ds, val_ds = torch.utils.data.random_split(dataset, (data_size - val_size, val_size))
