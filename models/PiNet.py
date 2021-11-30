@@ -27,9 +27,7 @@ class PiNet(nn.Module):
         for n in self.degrees:
             out = torch.add(out, self.weights_matrices[n].mm(z_n))
             # out = torch.add(out, self.weights_matrices[n].mm(z_n))
-            start = time()
             z_n = torch.Tensor(khart([input.T, z_n]))
-            print(time()-start)
         return out.T
 
     def get_losses(self, batch):
@@ -46,22 +44,25 @@ class PiNet(nn.Module):
         parameters, values = batch
         out = self(parameters)
         loss = self.loss(out, values)
-        return {'mse': loss.detach(), 'accuracy': self.accuracy(out, values)}
+        # return {'mse': loss.detach(), 'accuracy': self.accuracy(out, values)}
+        return {'mse': loss.detach()}
 
     def validation_epoch_end(self, outputs_val):
         batch_losses_val = [x['mse'] for x in outputs_val]
-        batch_acc_val = [x['accuracy'] for x in outputs_val]
+        # batch_acc_val = [x['accuracy'] for x in outputs_val]
         epoch_loss_val = torch.stack(batch_losses_val).mean()  # Combine losses
-        epoch_acc_val = torch.stack(batch_acc_val).mean()  # Combine accuracies
-        return {'val_mse': epoch_loss_val.item(),
-                'val_acc': epoch_acc_val.item()}
+        # epoch_acc_val = torch.stack(batch_acc_val).mean()  # Combine accuracies
+        # return {'val_mse': epoch_loss_val.item(),
+        #         'val_acc': epoch_acc_val.item()}
+        return {'val_mse': epoch_loss_val.item()}
 
     def epoch_end(self, epoch, result):
-        print("Epoch [{}], validation mean squared error: {:.6f}, validation accuracy: {:.2f}".format(
-                epoch, result['val_mse'], result['val_acc']))
+        print("Epoch [{}], validation mean squared error: {:.6f}".format(
+                epoch, result['val_mse']))
 
     def accuracy(self, outputs, values):
         print("predictions: ", outputs, "values: ", values)
-        return torch.tensor(torch.sum(values[0]-1 <= outputs[0] <= values[0]+1).item() / len(preds))
+        # return torch.tensor(torch.sum(values[0]-1 <= outputs[0] <= values[0]+1).item() / len(preds))
+        return 100
 
 

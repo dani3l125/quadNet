@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = int(10e+5)  # 3 * 10e+6
-val_size = int(2 * 10e+4)  # 6 * 10e+5
+data_size = int(10e+3)  # 3 * 10e+6
+val_size = int(2 * 10e+2)  # 6 * 10e+5
 # Hyperparams, optimizer:
 num_epochs = 280
 lr = 0.01
-batch_size = 1028
+batch_size = 1024
 degree = 10
 opt_func = torch.optim.Adam
 schedule_func = torch.optim.lr_scheduler.StepLR
@@ -42,7 +42,7 @@ def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD, sche
             optimizer.zero_grad()
         # Validation phase
         result = evaluate(model, val_loader, train_loader)
-        result['train_loss'] = torch.stack(train_losses).mean().item()
+        result['val_mse'] = torch.stack(train_losses).mean().item()
         model.epoch_end(epoch, result)
         history.append(result)
         if epoch % 2 == 0:
