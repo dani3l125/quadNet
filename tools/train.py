@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
-from dataUtils import QuadSet as Dataset, DeviceDataLoader as DDL
-from dataUtils.QuadSet import *
+from dataUtils import MyDataSet as Dataset, DeviceDataLoader as DDL
+from dataUtils.MyDataSet import *
 from models.PiNet import PiNet
 import matplotlib.pyplot as plt
 

@@ -2,7 +2,7 @@ from models.QuadNet import QuadNet
 import torch
 import torch.nn.functional as F
 import numpy as np
-from dataUtils import QuadSet as Dataset, DeviceDataLoader as DDL
+from dataUtils import MyDataSet as Dataset, DeviceDataLoader as DDL
 
 
 def test():
