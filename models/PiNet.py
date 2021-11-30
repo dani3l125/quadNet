@@ -1,5 +1,8 @@
 import torch
 import torch.nn as nn
+from time import time
+from tensorly.tenalg import khatri_rao as khart
+# from scipy.linalg import khatri_rao as khart
 
 
 class PiNet(nn.Module):
@@ -14,16 +17,20 @@ class PiNet(nn.Module):
         for n in self.degrees:
             cols *= in_size
             self.weights_matrices.append(nn.Parameter(torch.rand(out_size, cols, requires_grad=True)))
+            # self.weights_matrices.append(nn.Linear(out_size, cols, bias=False))
         self.weights_matrices = nn.ParameterList(self.weights_matrices)
 
     def forward(self, input):
-        input = input.squeeze().unsqueeze(axis=1).type(torch.FloatTensor)
-        z_n = input
+
+        z_n = input.T
         out = self.weights_matrices[0]
         for n in self.degrees:
             out = torch.add(out, self.weights_matrices[n].mm(z_n))
-            z_n = torch.kron(z_n, input)
-        return out
+            # out = torch.add(out, self.weights_matrices[n].mm(z_n))
+            start = time()
+            z_n = torch.Tensor(khart([input.T, z_n]))
+            print(time()-start)
+        return out.T
 
     def get_losses(self, batch):
         parameters, values = batch
