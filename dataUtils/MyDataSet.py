@@ -44,8 +44,9 @@ def genData(size=100000):
             b = random.uniform(r_min, r_max)
             c = random.uniform(r_min, r_max)
             par_l = [a, b, c]
-            root_l = np.roots(par_l).sort()
+            root_l = np.roots(par_l)
             if np.isreal(root_l[0]) and np.isreal(root_l[1]):
+                root_l = root_l.sort()
                 writer.writerow(
                     [a, b, c, root_l[0] if np.isreal(root_l[0]) else None,
                      root_l[1] if np.isreal(root_l[1]) else None])
