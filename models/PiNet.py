@@ -9,8 +9,12 @@ class PiNet(nn.module):
         self.in_size = in_size
         self.out_size = out_size
         self.weights_matrices = []
+        self.bias_matrices = torch.rand(out_size, 1)
         cols = 1
         for n in range(degree):
             cols *= in_size
             self.weights_matrices.append(torch.rand((out_size, cols), requires_grad=True))
+
+    def forwatd(self, input):
+
 
