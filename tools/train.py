@@ -7,13 +7,14 @@ import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = int(2 * 10e+6)  # 3 * 10e+6
-val_size = int(4 * 10e+5)  # 6 * 10e+5
+data_size = int(2 * 10e+7)  # 3 * 10e+6
+val_size = int(4 * 10e+6)  # 6 * 10e+5
 # Hyperparams, optimizer:
 num_epochs = 750
 lr = 0.05
 batch_size = 2048
 degree = 15
+save_epoch = 20
 opt_func = torch.optim.Adam
 schedule_func = torch.optim.lr_scheduler.StepLR
 
@@ -45,7 +46,7 @@ def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD, sche
         result['val_mse'] = torch.stack(train_losses).mean().item()
         model.epoch_end(epoch, result)
         history.append(result)
-        if epoch % 10 == 0:
+        if epoch % save_epoch == 0:
             # save the model
             torch.save(model.state_dict(), 'QuadNet_ep' + str(epoch) + '.pth')
     return history
