@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = int(2 * 10e+7)  # 3 * 10e+6
-val_size = int(4 * 10e+6)  # 6 * 10e+5
+data_size = int(2 * 10e+6)  # 3 * 10e+6
+val_size = int(4 * 10e+5)  # 6 * 10e+5
 # Hyperparams, optimizer:
 num_epochs = 750
 lr = 0.05
