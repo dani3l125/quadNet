@@ -1,0 +1,16 @@
+DATASET:
+  SIZE: 2000
+  RANGE: 1
+  PROBLEM_DEGREE: 5
+  NAME: "NewCubic.csv"
+  THREADS: 1
+
+TRAIN:
+  EPOCHS: 3000
+  LR: 0.05
+  BATCH_SIZE: 1
+  SAVE_EPOCH: 200
+  OPT_FUNC: torch.optim.Adam
+  SCHED_FUNC: torch.optim.lr_scheduler.StepLR
+  NET_DEGREE: 1
+  OUT_SIZE: 10

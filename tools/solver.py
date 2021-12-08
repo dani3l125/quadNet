@@ -5,17 +5,12 @@ from dataUtils.MyDataSet import *
 from models.PiNet import PiNet
 import matplotlib.pyplot as plt
 
-r_min = -1
-r_max = 1
-data_size = 2000  # 3 * 10e+6
-# Hyperparams, optimizer:
-num_epochs = 2000
-lr = 0.05
-batch_size = 1
-degree = 1
-save_epoch = 200
-opt_func = torch.optim.Adam
-schedule_func = torch.optim.lr_scheduler.StepLR
+with open("config.yml", "r") as cfg:
+    cfg = yaml.load(cfg, Loader=yaml.FullLoader)
+
+# Initialize models
+file = open(os.path.join("experiments", "cubic_unsup_sol.txt"), "w")
+
 
 def evaluate(model, sample):
     with torch.no_grad():
@@ -45,9 +40,13 @@ def solve(epochs, lr, model, name, sample, opt_f=torch.optim.SGD, schedule_func=
             result['val_mse'] = torch.stack(train_losses).mean().item()
             model.epoch_end(epoch, result)
             history.append(result)
-        if epoch % save_epoch == 0:
+        if epoch % cfg['TRAIN']['SAVE_EPOCH'] == 0:
             # save the model
             torch.save(model.state_dict(), "experiments/" + name + '_epoch' + str(epoch) + '.pth')
+        if epoch % 50 == 0:
+            output = model(sample)
+            print("Epoch{}, found roots: {}".format(epoch, output.data))
+            file.write("Epoch{}, found roots: {}".format(epoch, output.data))
     return history
 
 
@@ -64,22 +63,21 @@ def plot_accuracies(history):
     plt.ylabel('loss')
     plt.title('Roots estimation MSE vs. No. of epochs')
 
-
-
-
-# Perform solving and visualize result
+    # Perform solving and visualize result
     history = []
+
+
 def solver():
     # Initialize dataUtils
     print("Creating dataset...")
-    genData(data_size)
+    genData(cfg['DATASET']['SIZE'])
     print("Dataset is created")
 
-    dataset = Quadset(data_size)
+    dataset = Quadset(cfg['DATASET']['SIZE'])
 
     # Initialize data loaders
     dataloader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=1,
+                                             batch_size=cfg['TRAIN']['BATCH_SIZE'],
                                              shuffle=True,
                                              num_workers=4,
                                              pin_memory=False
@@ -88,21 +86,19 @@ def solver():
     device = DDL.get_default_device()
     dataloader = DDL.DeviceDataLoader(dataloader, device)
 
-    # Initialize models
-    file = open(os.path.join("experiments", "cubic_unsup_sol.txt"), "w")
 
     for sample in dataloader:
-
-        Lmodel = PiNet(degree=1,
-                       in_size=6,
-                       out_size=100000,
+        Lmodel = PiNet(degree=cfg['TRAIN']['NET_DEGREE'],
+                       in_size=cfg['DATASET']['PROBLEM_DEGREE'] + 1,
+                       out_size=cfg['TRAIN']['OUT_SIZE'],
                        file=file
                        )
         DDL.to_device(Lmodel, device)
 
         file.write("\n\nSample:{}".format(sample))
         file.write("\nLinear:")
-        solve(num_epochs, lr, Lmodel, 'linear', sample, opt_func, schedule_func)
+        solve(cfg['TRAIN']['EPOCHS'], cfg['TRAIN']['LR'], Lmodel, 'linear', sample, eval(cfg['TRAIN']['OPT_FUNC']),
+              eval(cfg['TRAIN']['SCHED_FUNC']))
 
 
 if __name__ == "__main__":

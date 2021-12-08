@@ -5,6 +5,7 @@ import tensorly as tl
 from tensorly.tenalg import khatri_rao as khart
 import os
 
+
 # from scipy.linalg import khatri_rao as khart
 
 
@@ -22,7 +23,7 @@ class PiNet(nn.Module):
         for n in self.degrees:
             cols *= in_size
             self.weights_matrices.append(
-                nn.Parameter(torch.rand(out_size, cols, dtype=torch.float64, requires_grad=True)))
+                nn.Parameter(1 * torch.rand(out_size, cols, dtype=torch.float64, requires_grad=True)))
             # self.weights_matrices.append(nn.Linear(out_size, cols, bias=False))
         self.weights_matrices = nn.ParameterList(self.weights_matrices)
 
@@ -37,23 +38,21 @@ class PiNet(nn.Module):
         return out.T
 
     def get_losses(self, batch, val=False):
-        parameters, values = batch
+        parameters = batch
         # values = values.flatten()
         out = self(parameters)
         # return self.loss(out, values)
         if val:
-            return self.loss((parameters[:, 0].unsqueeze(axis=1) * out ** 2 + parameters[:, 1].unsqueeze(
-                axis=1) * out + parameters[:, 2].unsqueeze(axis=1)).flatten().min(),
+            return self.loss(torch.sum(torch.stack([parameters[:, i].unsqueeze(axis=1) * torch.pow(out, i) for i in range(parameters.shape[1])]),dim=0).flatten().min(),
                              torch.zeros(device="cuda", size=(1, 1)).squeeze())
-        return self.loss((parameters[:, 0].unsqueeze(axis=1) * out ** 2 + parameters[:, 1].unsqueeze(
-            axis=1) * out + parameters[:, 2].unsqueeze(axis=1)).flatten(),
+        return self.loss(torch.sum(torch.stack([parameters[:, i].unsqueeze(axis=1) * torch.pow(out, i) for i in range(parameters.shape[1])]),dim=0).flatten(),
                          torch.zeros(device="cuda", size=(1, out.size()[0] * out.size()[1])).squeeze())
 
     def training_step(self, batch):
         return self.get_losses(batch)
 
     def validation_step(self, batch):
-        loss = 1 / batch[0].size()[0] * self.get_losses(batch,val=True)
+        loss = 1 / batch[0].size()[0] * self.get_losses(batch, val=True)
         # return {'mse': loss.detach(), 'accuracy': self.accuracy(out, values)}
         return {'mse': loss.detach()}
 
