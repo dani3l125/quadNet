@@ -23,7 +23,7 @@ def evaluate(model, sample):
 def solve(epochs, lr, model, name, sample, opt_f=torch.optim.SGD, schedule_func=torch.optim.lr_scheduler.StepLR):
     history = []
     optimizer = opt_f(model.parameters(), lr)
-    scheduler = schedule_func(optimizer, 200)
+    scheduler = schedule_func(optimizer, 2000)
     for epoch in range(epochs):
         # Training Phase
         model.train()
@@ -37,7 +37,7 @@ def solve(epochs, lr, model, name, sample, opt_f=torch.optim.SGD, schedule_func=
         # Validation phase
         if epoch % 20 == 0:
             result = evaluate(model, sample)
-            result['val_mse'] = torch.stack(train_losses).mean().item()
+            # result['val_mse'] = torch.stack(train_losses).mean().item()
             model.epoch_end(epoch, result)
             history.append(result)
         if epoch % cfg['TRAIN']['SAVE_EPOCH'] == 0:

@@ -6,8 +6,8 @@ DATASET:
   THREADS: 1
 
 TRAIN:
-  EPOCHS: 3000
-  LR: 0.05
+  EPOCHS: 10000
+  LR: 0.1
   BATCH_SIZE: 1
   SAVE_EPOCH: 200
   OPT_FUNC: torch.optim.Adam
