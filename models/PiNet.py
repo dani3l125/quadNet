@@ -15,7 +15,7 @@ class PiNet(nn.Module):
         self.solution = file
         self.degrees = range(1, degree + 1)
         self.in_size = in_size
-        self.loss = nn.L1Loss(reduction='sum')
+        self.loss = nn.MSELoss(reduction='mean')
         self.out_size = out_size
         self.weights_matrices = [nn.Parameter(torch.rand(out_size, 1, dtype=torch.float64, requires_grad=True))]
         cols = 1

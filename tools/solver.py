@@ -12,7 +12,7 @@ data_size = 2000  # 3 * 10e+6
 num_epochs = 2000
 lr = 0.05
 batch_size = 1
-degree = 7
+degree = 1
 save_epoch = 200
 opt_func = torch.optim.Adam
 schedule_func = torch.optim.lr_scheduler.StepLR
@@ -79,35 +79,28 @@ def solver():
 
     # Initialize data loaders
     dataloader = torch.utils.data.DataLoader(dataset,
-                                           batch_size=1,
-                                           shuffle=True,
-                                           num_workers=4,
-                                           pin_memory=False
-                                           )
+                                             batch_size=1,
+                                             shuffle=True,
+                                             num_workers=4,
+                                             pin_memory=False
+                                             )
     # use GPU only if available
     device = DDL.get_default_device()
     dataloader = DDL.DeviceDataLoader(dataloader, device)
 
     # Initialize models
-    file = open(os.path.join("experiments", "unsup_sol.txt"), "w")
+    file = open(os.path.join("experiments", "cubic_unsup_sol.txt"), "w")
+
     for sample in dataloader:
-        Pmodel = PiNet(degree=degree,
-                      in_size=3,
-                      out_size=2,
-                      file=file
-                      )
 
         Lmodel = PiNet(degree=1,
-                       in_size=3,
-                       out_size=2,
+                       in_size=4,
+                       out_size=3,
                        file=file
-                      )
-        DDL.to_device(Pmodel, device)
+                       )
         DDL.to_device(Lmodel, device)
 
         file.write("\n\nSample:{}".format(sample))
-        file.write("\nPolynomial:")
-        solve(num_epochs, lr, Pmodel, 'polynomial', sample, opt_func, schedule_func)
         file.write("\nLinear:")
         solve(num_epochs, lr, Lmodel, 'linear', sample, opt_func, schedule_func)
 

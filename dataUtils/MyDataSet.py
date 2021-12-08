@@ -12,8 +12,8 @@ import glob
 
 r_min = -10000.0
 r_max = 10000.0
-headers = ['a', 'b', 'c', 'root1', 'root2']
-data_path = os.path.join("Data2", "NewQuadratic.csv")
+headers = ['a1', 'a2', 'a3', 'a4', 'root1', 'root2', 'root3']
+data_path = os.path.join("CubeData", "NewCubic.csv")
 n_threads = 1
 
 
@@ -47,7 +47,7 @@ def genData(size=100000):
         threads[t].start()
     for t in range(n_threads):
         threads[t].join()
-    all_filenames = glob.glob("Data2" + "/*.csv")
+    all_filenames = glob.glob("CubeData" + "/*.csv")
     # combine all files in the list
     combined_csv = pd.concat([pd.read_csv(f) for f in all_filenames])
     # export to csv
@@ -56,19 +56,20 @@ def genData(size=100000):
 
 def subData(size, index):
     i = 0
-    if path.exists(os.path.join("Data2", "quadratic{}.csv".format(index))):
-        os.remove(os.path.join("Data2", "quadratic{}.csv".format(index)))
-    with open(os.path.join("Data2", "quadratic{}.csv".format(index)), 'w') as data:
+    if path.exists(os.path.join("CubeData", "cubic{}.csv".format(index))):
+        os.remove(os.path.join("CubeData", "cubic{}.csv".format(index)))
+    with open(os.path.join("CubeData", "cubic{}.csv".format(index)), 'w') as data:
         writer = csv.writer(data)
         writer.writerow(headers)
         while i in range(int(size)):
             a = random.uniform(r_min, r_max)
             b = random.uniform(r_min, r_max)
             c = random.uniform(r_min, r_max)
-            par_l = [a, b, c]
+            d = random.uniform(r_min, r_max)
+            par_l = [a, b, c, d]
             root_l = np.roots(par_l)
-            if np.isreal(root_l[0]) and np.isreal(root_l[1]):
+            if np.isreal(root_l[0]) and np.isreal(root_l[1]) and np.isreal(root_l[2]):
                 root_l = np.sort(root_l)
                 writer.writerow(
-                    np.array([a, b, c, root_l[0], root_l[1]]))
+                    np.array([a, b, c, d, root_l[0], root_l[1], root_l[2]]))
                 i += 1
