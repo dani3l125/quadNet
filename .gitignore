@@ -1,5 +1,7 @@
 .idea
 Data
 Data2
+CubeData
+experiments
 __pycache__
 *.pth

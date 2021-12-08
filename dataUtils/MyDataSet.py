@@ -30,8 +30,9 @@ class Quadset(Dataset):
 
     def getData(self, size=100000):
         data = pd.read_csv(data_path).dropna().reset_index(drop=True).head(size)
-        par = np.array([data.loc[:, headers[0]], data.loc[:, headers[1]], data.loc[:, headers[2]]]).T
-        roots = np.array([data.loc[:, headers[3]], data.loc[:, headers[4]]]).T
+        par = np.array(
+            [data.loc[:, headers[0]], data.loc[:, headers[1]], data.loc[:, headers[2]], data.loc[:, headers[3]]]).T
+        roots = np.array([data.loc[:, headers[4]], data.loc[:, headers[5]], data.loc[:, headers[6]]]).T
         return par.astype(np.float64), roots.astype(np.float64)
 
 
