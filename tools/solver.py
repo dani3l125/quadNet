@@ -94,8 +94,8 @@ def solver():
     for sample in dataloader:
 
         Lmodel = PiNet(degree=1,
-                       in_size=4,
-                       out_size=3,
+                       in_size=6,
+                       out_size=100000,
                        file=file
                        )
         DDL.to_device(Lmodel, device)

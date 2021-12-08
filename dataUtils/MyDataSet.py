@@ -12,7 +12,7 @@ import glob
 
 r_min = -10000.0
 r_max = 10000.0
-headers = ['a1', 'a2', 'a3', 'a4', 'root1', 'root2', 'root3']
+headers = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'root1', 'root2', 'root3', 'root4', 'root5']
 data_path = os.path.join("CubeData", "NewCubic.csv")
 n_threads = 1
 
@@ -31,8 +31,8 @@ class Quadset(Dataset):
     def getData(self, size=100000):
         data = pd.read_csv(data_path).dropna().reset_index(drop=True).head(size)
         par = np.array(
-            [data.loc[:, headers[0]], data.loc[:, headers[1]], data.loc[:, headers[2]], data.loc[:, headers[3]]]).T
-        roots = np.array([data.loc[:, headers[4]], data.loc[:, headers[5]], data.loc[:, headers[6]]]).T
+            [data.loc[:, headers[0]], data.loc[:, headers[1]], data.loc[:, headers[2]], data.loc[:, headers[3]], data.loc[:, headers[4]], data.loc[:, headers[5]]]).T
+        roots = np.array([data.loc[:, headers[6]], data.loc[:, headers[7]], data.loc[:, headers[8]], data.loc[:, headers[9]], data.loc[:, headers[10]]]).T
         return par.astype(np.float64), roots.astype(np.float64)
 
 
@@ -67,10 +67,12 @@ def subData(size, index):
             b = random.uniform(r_min, r_max)
             c = random.uniform(r_min, r_max)
             d = random.uniform(r_min, r_max)
-            par_l = [a, b, c, d]
-            root_l = np.roots(par_l)
-            if np.isreal(root_l[0]) and np.isreal(root_l[1]) and np.isreal(root_l[2]):
-                root_l = np.sort(root_l)
-                writer.writerow(
-                    np.array([a, b, c, d, root_l[0], root_l[1], root_l[2]]))
-                i += 1
+            e = random.uniform(r_min, r_max)
+            f = random.uniform(r_min, r_max)
+            par_l = [a, b, c, d, e, f]
+            # root_l = np.roots(par_l)
+            # if np.isreal(root_l[0]) and np.isreal(root_l[1]) and np.isreal(root_l[2]) and np.isreal(root_l[3]) and np.isreal(root_l[4]):
+            # root_l = np.sort(root_l)
+            writer.writerow(
+                np.array([a, b, c, d, e, f, 0, 0, 0, 0, 0]))
+            i += 1

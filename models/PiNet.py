@@ -15,7 +15,7 @@ class PiNet(nn.Module):
         self.solution = file
         self.degrees = range(1, degree + 1)
         self.in_size = in_size
-        self.loss = nn.MSELoss(reduction='mean')
+        self.loss = nn.L1Loss(reduction='mean')
         self.out_size = out_size
         self.weights_matrices = [nn.Parameter(torch.rand(out_size, 1, dtype=torch.float64, requires_grad=True))]
         cols = 1
@@ -36,27 +36,31 @@ class PiNet(nn.Module):
             z_n = khart([input.T, z_n])
         return out.T
 
-    def get_losses(self, batch):
+    def get_losses(self, batch, val=False):
         parameters, values = batch
         # values = values.flatten()
         out = self(parameters)
         # return self.loss(out, values)
+        if val:
+            return self.loss((parameters[:, 0].unsqueeze(axis=1) * out ** 2 + parameters[:, 1].unsqueeze(
+                axis=1) * out + parameters[:, 2].unsqueeze(axis=1)).flatten().min(),
+                             torch.zeros(device="cuda", size=(1, 1)).squeeze())
         return self.loss((parameters[:, 0].unsqueeze(axis=1) * out ** 2 + parameters[:, 1].unsqueeze(
             axis=1) * out + parameters[:, 2].unsqueeze(axis=1)).flatten(),
-                         torch.zeros(device="cuda", size=(1, values.size()[0] * values.size()[1])).squeeze())
+                         torch.zeros(device="cuda", size=(1, out.size()[0] * out.size()[1])).squeeze())
 
     def training_step(self, batch):
         return self.get_losses(batch)
 
     def validation_step(self, batch):
-        loss = 1 / batch[0].size()[0] * self.get_losses(batch)
+        loss = 1 / batch[0].size()[0] * self.get_losses(batch,val=True)
         # return {'mse': loss.detach(), 'accuracy': self.accuracy(out, values)}
         return {'mse': loss.detach()}
 
     def validation_epoch_end(self, outputs_val):
         batch_losses_val = [x['mse'] for x in outputs_val]
         # batch_acc_val = [x['accuracy'] for x in outputs_val]
-        epoch_loss_val = torch.stack(batch_losses_val).mean()  # Combine losses
+        epoch_loss_val = torch.stack(batch_losses_val).min()  # Combine losses
         # epoch_acc_val = torch.stack(batch_acc_val).mean()  # Combine accuracies
         # return {'val_mse': epoch_loss_val.item(),
         #         'val_acc': epoch_acc_val.item()}
