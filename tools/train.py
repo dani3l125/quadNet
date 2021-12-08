@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 
 r_min = -10000.0
 r_max = 10000.0
-data_size = int(2 * 10e+7)  # 3 * 10e+6
+data_size = 100  # 3 * 10e+6
 val_size = int(4 * 10e+6)  # 6 * 10e+5
 # Hyperparams, optimizer:
 num_epochs = 750
 lr = 0.05
-batch_size = 2048
+batch_size = 1
 degree = 15
 save_epoch = 20
 opt_func = torch.optim.Adam

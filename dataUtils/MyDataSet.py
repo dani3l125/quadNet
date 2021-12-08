@@ -14,7 +14,7 @@ r_min = -10000.0
 r_max = 10000.0
 headers = ['a', 'b', 'c', 'root1', 'root2']
 data_path = os.path.join("Data2", "NewQuadratic.csv")
-n_threads = 10
+n_threads = 1
 
 
 class Quadset(Dataset):

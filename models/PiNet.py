@@ -3,15 +3,16 @@ import torch.nn as nn
 from time import time
 import tensorly as tl
 from tensorly.tenalg import khatri_rao as khart
-
+import os
 
 # from scipy.linalg import khatri_rao as khart
 
 
 class PiNet(nn.Module):
-    def __init__(self, degree, in_size, out_size):
+    def __init__(self, degree, in_size, out_size, file):
         tl.set_backend('pytorch')
         super().__init__()
+        self.solution = file
         self.degrees = range(1, degree + 1)
         self.in_size = in_size
         self.loss = nn.L1Loss(reduction='sum')
@@ -37,9 +38,12 @@ class PiNet(nn.Module):
 
     def get_losses(self, batch):
         parameters, values = batch
-        values = values.flatten()
-        out = self(parameters).flatten()
-        return self.loss(out, values)
+        # values = values.flatten()
+        out = self(parameters)
+        # return self.loss(out, values)
+        return self.loss((parameters[:, 0].unsqueeze(axis=1) * out ** 2 + parameters[:, 1].unsqueeze(
+            axis=1) * out + parameters[:, 2].unsqueeze(axis=1)).flatten(),
+                         torch.zeros(device="cuda", size=(1, values.size()[0] * values.size()[1])).squeeze())
 
     def training_step(self, batch):
         return self.get_losses(batch)
@@ -58,11 +62,17 @@ class PiNet(nn.Module):
         #         'val_acc': epoch_acc_val.item()}
         return {'val_mse': epoch_loss_val.item()}
 
+    def solver_epoch_end(self, output):
+        epoch_loss = output['mse']
+        return {'val_mse': epoch_loss.item()}
+
     def epoch_end(self, epoch, result):
         print("Epoch [{}], validation mean squared error: {:.6f}".format(
             epoch, result['val_mse']))
+        self.solution.write("Epoch [{}], sum of distances between roots: {:.6f}\n".format(
+            epoch, result['val_mse']))
 
     def accuracy(self, outputs, values):
-        print("predictions: ", outputs, "values: ", values)
+        # print("predictions: ", outputs, "values: ", values)
         # return torch.tensor(torch.sum(values[0]-1 <= outputs[0] <= values[0]+1).item() / len(preds))
         return 100
