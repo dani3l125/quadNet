@@ -29,12 +29,17 @@ def gen_data(data_path: str = cfg["DATASET"]["NAME"]):
 
     os.makedirs(data_path, exist_ok=True)
 
-    # for t in range(cfg['DATASET']['THREADS']):
-    #     points = np.random.random_sample((cfg['DATASET']['POINTS'], cfg['DATASET']['DIMENSION']))
-    #     threads.append(Process(target=generate_rot_tr, args=(points, t)))
-    #     threads[t].start()
-    points = np.random.random_sample((cfg['DATASET']['POINTS'], cfg['DATASET']['DIMENSION']))
-    generate_rot_tr(points, 0)
+    for t in range(cfg['DATASET']['THREADS']):
+        threads.append(Process(target=generate_points, args=(t,)))
+        threads[t].start()
+    # points = np.random.random_sample((cfg['DATASET']['POINTS'], cfg['DATASET']['DIMENSION']))
+    # generate_rot_tr(points, 0)
+
+
+def generate_points(t: int):
+    for index in range(cfg["DATASET"]["EPOCHS"]):
+        points = np.random.random_sample((cfg['DATASET']['POINTS'], cfg['DATASET']['DIMENSION']))
+        generate_rot_tr(points, t)
 
 
 def generate_rot_tr(points: np.ndarray, index: int):
