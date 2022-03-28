@@ -32,6 +32,8 @@ def gen_data(data_path: str = cfg["DATASET"]["NAME"]):
     for t in range(cfg['DATASET']['THREADS']):
         threads.append(Process(target=generate_points, args=(t,)))
         threads[t].start()
+    for t in range(cfg['DATASET']['THREADS']):
+        threads[t].join()
     # points = np.random.random_sample((cfg['DATASET']['POINTS'], cfg['DATASET']['DIMENSION']))
     # generate_rot_tr(points, 0)
 
@@ -39,21 +41,21 @@ def gen_data(data_path: str = cfg["DATASET"]["NAME"]):
 def generate_points(t: int):
     for index in range(cfg["DATASET"]["EPOCHS"]):
         points = np.random.random_sample((cfg['DATASET']['POINTS'], cfg['DATASET']['DIMENSION']))
-        generate_rot_tr(points, t)
+        generate_rot_tr(points, t, index)
 
 
-def generate_rot_tr(points: np.ndarray, index: int):
-    file_path = path.join(cfg["DATASET"]["NAME"], f'group{index}')
+def generate_rot_tr(points: np.ndarray, thread: int, index: int):
+    file_path = path.join(cfg["DATASET"]["NAME"], f'group_{thread}_{index}')
     if path.exists(file_path):
         os.remove(file_path)
     os.mkdir(file_path)
 
-    np.save(path.join(cfg['DATASET']['NAME'], f'group{index}', 'points.npy'), points)
+    np.save(path.join(cfg['DATASET']['NAME'], f'group_{thread}_{index}', 'points.npy'), points)
 
     for i in range(cfg['DATASET']['SIZE']):
         rotation = random_rotation.rvs(cfg['DATASET']['DIMENSION'])
         translation = np.random.random_sample(cfg['DATASET']['DIMENSION'])
-        file_path = path.join(cfg["DATASET"]["NAME"], f'group{index}', f'transformation{i}')
+        file_path = path.join(cfg["DATASET"]["NAME"], f'group_{thread}_{index}', f'transformation{i}')
         if path.exists(file_path):
             os.remove(file_path)
         os.mkdir(file_path)

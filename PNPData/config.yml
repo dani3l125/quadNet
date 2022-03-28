@@ -3,5 +3,5 @@ DATASET:
   POINTS: 2000
   SIZE: 2000
   DIMENSION: 3
-  NAME: "/media/daniel/wd_elements/PNP3"
-  THREADS: 7
+  NAME: "D:\\PNP3"
+  THREADS: 10
