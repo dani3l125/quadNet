@@ -9,6 +9,17 @@ from scipy.stats import special_ortho_group as random_rotation
 import pandas as pd
 import operator as op
 from functools import reduce
+import argparse
+from torchvision.transforms import ToTensor
+import torch
+import torch.nn as nn
+from torch.optim import Adam
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--gen', type=int, default=0,
+                    help='an integer for the accumulator')
+
+args = parser.parse_args()
 
 
 def ncr(n, r):
@@ -137,5 +148,56 @@ def get_pol_system(q_points: np.ndarray, p_points: np.ndarray):
     return system
 
 
+def resize_vector(vector):
+    vector = torch.cat((vector, torch.tensor([1], device='cuda')), dim=-1)
+    vector_indexer = Indexer(vector.shape[0])
+    resized = torch.zeros((len(vector_indexer), vector.shape[1]), device='cuda')
+    for i in range(len(vector)):
+        for j in range(i, len(vector)):
+            resized[vector_indexer[i, j], :] = vector[i, :] * vector[j, :]
+    return resized
+
+
 if __name__ == '__main__':
-    gen_data()
+    if args.gen:
+        gen_data()
+
+    in_sys = torch.from_numpy(np.load('D:\\PNP3\\group_0_0\\transformation0\\system.npy')).to('cuda:0').type(
+        torch.float32)
+    flatten_in_sys = torch.flatten(in_sys)
+    model = nn.Sequential(nn.Linear(3420, 200),
+                          nn.ReLU(),
+                          nn.Linear(200, 200),
+                          nn.Dropout(p=0.5),
+                          nn.ReLU(),
+                          nn.Linear(200, 200),
+                          nn.Dropout(p=0.5),
+                          nn.ReLU(),
+                          nn.Linear(200, 200),
+                          nn.Dropout(p=0.5),
+                          nn.ReLU(),
+                          nn.Linear(200, 18),
+                          ).to('cuda:0')
+
+    criterion = nn.L1Loss()
+    optimizer = Adam(model.parameters(), lr=0.01)
+
+    for i in range(3000):
+        optimizer.zero_grad()
+        out = model(flatten_in_sys)
+        resized = resize_vector(out).view((-1, 1))
+        values = torch.matmul(in_sys, resized)
+        loss = criterion(values, torch.zeros_like(values))
+        loss.backward()
+        optimizer.step()
+        if i % 100 == 0:
+            print(f'Epoch = {i + 1} | Loss = {loss.item()}')
+
+    model.eval()
+    with torch.no_grad():
+        out = model(flatten_in_sys)
+        resized = resize_vector(out).view((-1, 1))
+        values = torch.matmul(in_sys, resized)
+        loss = criterion(values, torch.zeros_like(values))
+        print(f'Final Loss = {loss.item()}')
+        print(out)
