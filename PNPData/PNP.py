@@ -178,7 +178,7 @@ if __name__ == '__main__':
     train_dl = DataLoader(train_ds, batch_size=16, pin_memory=True, num_workers=4)
     val_dl = DataLoader(val_ds, batch_size=16, pin_memory=True, num_workers=4)
 
-    model = resnet50()
+    model = resnet50().to(device)
     model.fc = nn.Linear(model.fc.output_size, 9)
 
     criterion = nn.L1Loss()
@@ -192,11 +192,11 @@ if __name__ == '__main__':
         # Training epoch
         for i, systems in enumerate(train_dl):
             optimizer.zero_grad()
-            flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float32)
+            flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float32).to(device)
             out = model(flatten_in_sys)
             resized = resize_vector(out)
-            values = torch.matmul(systems.type(torch.float32), resized.T.type(torch.float32))
-            loss = criterion(values, torch.zeros_like(values))
+            values = torch.matmul(systems.type(torch.float32).to(device), resized.T.type(torch.float32).to(device))
+            loss = criterion(values, torch.zeros_like(values).to(device))
             loss.backward()
             optimizer.step()
             print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
@@ -207,9 +207,9 @@ if __name__ == '__main__':
             for i, systems in enumerate(val_dl):
                 flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float32)
                 out = model(flatten_in_sys)
-                resized = resize_vector(out)
-                values = torch.matmul(systems.type(torch.float32), resized.T.type(torch.float32))
-                loss = criterion(values, torch.zeros_like(values))
+                resized = resize_vector(out).to(device)
+                values = torch.matmul(systems.type(torch.float32).to(device), resized.T.type(torch.float32).to(device))
+                loss = criterion(values, torch.zeros_like(values).to(device))
                 loss_sum += 0
                 print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
                 if loss.item() > 70:
