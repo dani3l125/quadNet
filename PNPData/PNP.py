@@ -22,6 +22,8 @@ parser.add_argument('--gen', type=int, default=0,
                     help='an integer for the accumulator')
 parser.add_argument('--one', type=int, default=0,
                     help='an integer for the accumulator')
+parser.add_argument('--batch_size', type=int, default=64,
+                    help='an integer for the accumulator')
 
 args = parser.parse_args()
 
@@ -175,8 +177,8 @@ if __name__ == '__main__':
         val_ds = dataset
     else:
         train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
-    train_dl = DataLoader(train_ds, batch_size=4, pin_memory=True, num_workers=4)
-    val_dl = DataLoader(val_ds, batch_size=4, pin_memory=True, num_workers=4)
+    train_dl = DataLoader(train_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
+    val_dl = DataLoader(val_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
 
     model = resnet50()
     model.fc = nn.Linear(model.fc.in_features, 18)
