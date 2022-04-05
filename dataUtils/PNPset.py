@@ -17,7 +17,7 @@ with open(r'config.yml', 'r') as cfg:
 class PNPset(Dataset):
     def __init__(self):
         self.paths = glob.glob(cfg["DATASET"]["NAME"]+'\\*\\*\\system.npy')
-        self.samples = [torch.tensor(np.load(path)) for path in self.paths]
+        self.samples = [torch.tensor(np.load(path)) for path in self.paths[:200]]
         self.dim = self.samples[0].shape[0]
         self.coefficients = self.samples[0].shape[1]
 

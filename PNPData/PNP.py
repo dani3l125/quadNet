@@ -161,8 +161,8 @@ def resize_vector(vector):
     resized = torch.zeros((vector.shape[0], len(vector_indexer)), device=device)
     for i in range(vector.shape[1]):
         for j in range(i, vector.shape[1]):
-            resized[:,  [i, j]] = vector[:, i] * vector[:, j]
-    return resized.type(torch.float32)
+            resized[:, vector_indexer[i, j]] = vector[:, i] * vector[:, j]
+    return resized.type(torch.float64)
 
 
 if __name__ == '__main__':
@@ -175,11 +175,12 @@ if __name__ == '__main__':
         val_ds = dataset
     else:
         train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
-    train_dl = DataLoader(train_ds, batch_size=16, pin_memory=True, num_workers=4)
-    val_dl = DataLoader(val_ds, batch_size=16, pin_memory=True, num_workers=4)
+    train_dl = DataLoader(train_ds, batch_size=4, pin_memory=True, num_workers=4)
+    val_dl = DataLoader(val_ds, batch_size=4, pin_memory=True, num_workers=4)
 
-    model = resnet50().to(device)
-    model.fc = nn.Linear(model.fc.output_size, 9)
+    model = resnet50()
+    model.fc = nn.Linear(model.fc.in_features, 18)
+    model = model.double().to(device)
 
     criterion = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=0.1)
@@ -192,10 +193,12 @@ if __name__ == '__main__':
         # Training epoch
         for i, systems in enumerate(train_dl):
             optimizer.zero_grad()
-            flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float32).to(device)
-            out = model(flatten_in_sys)
+            flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64).to(device)
+            out = model(
+                nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(torch.float64).to(
+                    device))
             resized = resize_vector(out)
-            values = torch.matmul(systems.type(torch.float32).to(device), resized.T.type(torch.float32).to(device))
+            values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
             loss = criterion(values, torch.zeros_like(values).to(device))
             loss.backward()
             optimizer.step()
@@ -205,18 +208,16 @@ if __name__ == '__main__':
 
         with torch.no_grad():
             for i, systems in enumerate(val_dl):
-                flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float32)
-                out = model(flatten_in_sys)
+                flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64)
+                out = model(nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(
+                    torch.float64).to(device))
                 resized = resize_vector(out).to(device)
-                values = torch.matmul(systems.type(torch.float32).to(device), resized.T.type(torch.float32).to(device))
+                values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
                 loss = criterion(values, torch.zeros_like(values).to(device))
                 loss_sum += 0
                 print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
-                if loss.item() > 70:
-                    scheduler.step(loss)
+                scheduler.step(loss)
 
         # lr_scheduler.step(loss_sum)
 
         torch.save(model.state_dict(), f'solver{e}.pth')
-
-    print(resized)
