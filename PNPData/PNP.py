@@ -10,16 +10,23 @@ import pandas as pd
 import operator as op
 from functools import reduce
 import argparse
-from torchvision.transforms import ToTensor
+from torch.utils.data import random_split, DataLoader
 import torch
 import torch.nn as nn
-from torch.optim import Adam
+from torch.optim import Adam, SGD, lr_scheduler
+from dataUtils.PNPset import *
+from torchvision.models import resnet50
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--gen', type=int, default=0,
                     help='an integer for the accumulator')
+parser.add_argument('--one', type=int, default=0,
+                    help='an integer for the accumulator')
 
 args = parser.parse_args()
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+EPOCHS = 500
 
 
 def ncr(n, r):
@@ -149,55 +156,67 @@ def get_pol_system(q_points: np.ndarray, p_points: np.ndarray):
 
 
 def resize_vector(vector):
-    vector = torch.cat((vector, torch.tensor([1], device='cuda')), dim=-1)
-    vector_indexer = Indexer(vector.shape[0])
-    resized = torch.zeros((len(vector_indexer), vector.shape[1]), device='cuda')
-    for i in range(len(vector)):
-        for j in range(i, len(vector)):
-            resized[vector_indexer[i, j], :] = vector[i, :] * vector[j, :]
-    return resized
+    vector = torch.cat((vector, torch.ones((vector.shape[0], 1), device=device)), dim=-1)
+    vector_indexer = Indexer(vector.shape[1])
+    resized = torch.zeros((vector.shape[0], len(vector_indexer)), device=device)
+    for i in range(vector.shape[1]):
+        for j in range(i, vector.shape[1]):
+            resized[:,  [i, j]] = vector[:, i] * vector[:, j]
+    return resized.type(torch.float32)
 
 
 if __name__ == '__main__':
     if args.gen:
         gen_data()
 
-    in_sys = torch.from_numpy(np.load('D:\\PNP3\\group_0_0\\transformation0\\system.npy')).to('cuda:0').type(
-        torch.float32)
-    flatten_in_sys = torch.flatten(in_sys)
-    model = nn.Sequential(nn.Linear(3420, 200),
-                          nn.ReLU(),
-                          nn.Linear(200, 200),
-                          nn.Dropout(p=0.5),
-                          nn.ReLU(),
-                          nn.Linear(200, 200),
-                          nn.Dropout(p=0.5),
-                          nn.ReLU(),
-                          nn.Linear(200, 200),
-                          nn.Dropout(p=0.5),
-                          nn.ReLU(),
-                          nn.Linear(200, 18),
-                          ).to('cuda:0')
+    dataset = PNPset()
+    if args.one:
+        train_ds = dataset
+        val_ds = dataset
+    else:
+        train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
+    train_dl = DataLoader(train_ds, batch_size=16, pin_memory=True, num_workers=4)
+    val_dl = DataLoader(val_ds, batch_size=16, pin_memory=True, num_workers=4)
+
+    model = resnet50()
+    model.fc = nn.Linear(model.fc.output_size, 9)
 
     criterion = nn.L1Loss()
-    optimizer = Adam(model.parameters(), lr=0.01)
+    optimizer = Adam(model.parameters(), lr=0.1)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5)
 
-    for i in range(3000):
-        optimizer.zero_grad()
-        out = model(flatten_in_sys)
-        resized = resize_vector(out).view((-1, 1))
-        values = torch.matmul(in_sys, resized)
-        loss = criterion(values, torch.zeros_like(values))
-        loss.backward()
-        optimizer.step()
-        if i % 100 == 0:
-            print(f'Epoch = {i + 1} | Loss = {loss.item()}')
+    for e in range(EPOCHS):
+        print(f'===Epoch {e + 1}===')
+        running_loss = 0.0
 
-    model.eval()
-    with torch.no_grad():
-        out = model(flatten_in_sys)
-        resized = resize_vector(out).view((-1, 1))
-        values = torch.matmul(in_sys, resized)
-        loss = criterion(values, torch.zeros_like(values))
-        print(f'Final Loss = {loss.item()}')
-        print(out)
+        # Training epoch
+        for i, systems in enumerate(train_dl):
+            optimizer.zero_grad()
+            flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float32)
+            out = model(flatten_in_sys)
+            resized = resize_vector(out)
+            values = torch.matmul(systems.type(torch.float32), resized.T.type(torch.float32))
+            loss = criterion(values, torch.zeros_like(values))
+            loss.backward()
+            optimizer.step()
+            print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
+
+        loss_sum = 0
+
+        with torch.no_grad():
+            for i, systems in enumerate(val_dl):
+                flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float32)
+                out = model(flatten_in_sys)
+                resized = resize_vector(out)
+                values = torch.matmul(systems.type(torch.float32), resized.T.type(torch.float32))
+                loss = criterion(values, torch.zeros_like(values))
+                loss_sum += 0
+                print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
+                if loss.item() > 70:
+                    scheduler.step(loss)
+
+        # lr_scheduler.step(loss_sum)
+
+        torch.save(model.state_dict(), f'solver{e}.pth')
+
+    print(resized)
