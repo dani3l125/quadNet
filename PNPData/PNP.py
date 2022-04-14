@@ -7,8 +7,6 @@ import os.path as path
 import os
 from scipy.stats import special_ortho_group as random_rotation
 import pandas as pd
-import operator as op
-from functools import reduce
 import argparse
 from torch.utils.data import random_split, DataLoader
 import torch
@@ -16,6 +14,7 @@ import torch.nn as nn
 from torch.optim import Adam, SGD, lr_scheduler
 from dataUtils.PNPset import *
 from torchvision.models import resnet50
+from scipy.special import comb
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--gen', type=int, default=0,
@@ -32,10 +31,7 @@ EPOCHS = 500
 
 
 def ncr(n, r):
-    r = min(r, n - r)
-    numer = reduce(op.mul, range(n, n - r, -1), 1)
-    denom = reduce(op.mul, range(1, r + 1), 1)
-    return numer // denom
+    return comb(n, r, exact=True)
 
 
 with open(r'config.yml', 'r') as cfg:
@@ -176,7 +172,7 @@ def get_lagrange_coefficients(*, q_points: np.ndarray, p_points: np.ndarray, tra
             for i in range(m + 1, d):
                 system[m * d + k, eta_indexer(i) + m] = rotation[i, k]  # eta^i_m
 
-    return np.linalg.pinv(system) @ free_coefficients[:, np.newaxis]
+    return (np.linalg.pinv(system) @ free_coefficients[:, np.newaxis]).squeeze()
 
 
 def resize_vector(vector):
