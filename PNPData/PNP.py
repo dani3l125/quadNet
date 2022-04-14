@@ -148,7 +148,7 @@ def get_pol_system(*, q_points: np.ndarray, p_points: np.ndarray):
                     d * d + d + d + eta_indexer(m) + gamma, gamma * d + k]] = 1  # eta^m_gamma * r_gammak
             for beta in range(m + 1, d):
                 system[m * d + k + d + len(constraints_indexer), system_indexer[
-                    beta * d + k, eta_indexer(beta) + m]] = 1  # r_betak * eta^beta_m
+                    d * d + d + d + eta_indexer(beta) + m, beta * d + k]] = 1  # r_betak * eta^beta_m
 
     return system
 
@@ -165,12 +165,13 @@ def get_lagrange_coefficients(*, q_points: np.ndarray, p_points: np.ndarray, tra
 
     for m in range(d):
         for k in range(d):
-            free_coefficients[m * d + k] = 2 * translation[m] * np.sum(p_points[:, k])  # free coefficient
+            free_coefficients[m * d + k] = -2 * translation[m] * np.sum(p_points[:, k]) + 2 * np.sum(
+                q_points[:, m] * p_points[:, k])  # free coefficient
             system[m * d + k, m] = 2 * rotation[m, k]  # lambda_m
             for i in range(m):
-                system[m * d + k, eta_indexer(m) + i] = rotation[i, k]  # eta^m_i
+                system[m * d + k, d + eta_indexer(m) + i] = rotation[i, k]  # eta^m_i
             for i in range(m + 1, d):
-                system[m * d + k, eta_indexer(i) + m] = rotation[i, k]  # eta^i_m
+                system[m * d + k, d + eta_indexer(i) + m] = rotation[i, k]  # eta^i_m
 
     return (np.linalg.pinv(system) @ free_coefficients[:, np.newaxis]).squeeze()
 
@@ -186,8 +187,27 @@ def resize_vector(vector):
 
 
 if __name__ == '__main__':
-    if args.gen:
-        gen_data()
+    n = 100
+    d = 4
+
+    p_points = np.random.random_sample((n, d))
+    rotation = random_rotation.rvs(d)
+    translation = np.random.random_sample(d)
+
+    q_points = (rotation @ p_points.T + translation[:, np.newaxis]).T
+
+    system = get_pol_system(q_points=q_points, p_points=p_points)
+    lagrange = get_lagrange_coefficients(q_points=q_points, p_points=p_points, translation=translation,
+                                         rotation=rotation)
+
+    x = np.concatenate([rotation.ravel(), translation, lagrange])
+    x_torch = torch.from_numpy(x).unsqueeze(axis=0)
+    x_resized = np.array(resize_vector(x_torch)).T
+
+    print(system @ x_resized)
+
+    # if args.gen:
+    #     gen_data()
 
     # dataset = PNPset()
     # if args.one:
