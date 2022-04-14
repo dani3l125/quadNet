@@ -110,7 +110,7 @@ def eta_indexer(index):
     return (index - 1) * index // 2
 
 
-def get_pol_system(q_points: np.ndarray, p_points: np.ndarray):
+def get_pol_system(*, q_points: np.ndarray, p_points: np.ndarray):
     # Initialize constants
     n, d = p_points.shape
     dim = d * d + d + d + ((d * (d - 1)) // 2)
@@ -133,9 +133,9 @@ def get_pol_system(q_points: np.ndarray, p_points: np.ndarray):
     # derivative with respect to translation
     for k in range(d):
         system[k + len(constraints_indexer), system_indexer[dim, dim]] = -2 * np.sum(q_points[:, k])  # x_0 ** 2
-        system[k + len(constraints_indexer), system_indexer[d * d + k, dim]] = 2  # t_k * x_0
+        system[k + len(constraints_indexer), system_indexer[d * d + k, dim]] = 2 * n  # t_k * x_0
         for m in range(d):
-            system[k + len(constraints_indexer), system_indexer[k * d + m, dim]] = -2 * np.sum(
+            system[k + len(constraints_indexer), system_indexer[k * d + m, dim]] = 2 * np.sum(
                 p_points[:, m])  # r_km * x_0
 
     # derivative with respect to rotation
@@ -143,7 +143,7 @@ def get_pol_system(q_points: np.ndarray, p_points: np.ndarray):
         for k in range(d):
             system[m * d + k + d + len(constraints_indexer), system_indexer[dim, dim]] = -2 * np.sum(
                 q_points[:, m] * p_points[:, k])  # x_0 ** 2
-            system[m * d + k + d + len(constraints_indexer), system_indexer[d * d + m, dim]] = -2 * np.sum(
+            system[m * d + k + d + len(constraints_indexer), system_indexer[d * d + m, dim]] = 2 * np.sum(
                 p_points[:, k])  # t_m * x_0
             system[m * d + k + d + len(constraints_indexer), system_indexer[
                 d * d + d + m, m * d + k]] = 2  # lambda_m * r_mk
@@ -155,6 +155,28 @@ def get_pol_system(q_points: np.ndarray, p_points: np.ndarray):
                     beta * d + k, eta_indexer(beta) + m]] = 1  # r_betak * eta^beta_m
 
     return system
+
+
+def get_lagrange_coefficients(*, q_points: np.ndarray, p_points: np.ndarray, translation: np.ndarray,
+                              rotation: np.ndarray):
+    # Initialize constants
+    n, d = p_points.shape
+    size = d + ((d * (d - 1)) // 2)
+    system = np.zeros((d ** 2, size))
+    free_coefficients = np.zeros((d ** 2,))
+
+    # derivative with respect to rotation
+
+    for m in range(d):
+        for k in range(d):
+            free_coefficients[m * d + k] = 2 * translation[m] * np.sum(p_points[:, k])  # free coefficient
+            system[m * d + k, m] = 2 * rotation[m, k]  # lambda_m
+            for i in range(m):
+                system[m * d + k, eta_indexer(m) + i] = rotation[i, k]  # eta^m_i
+            for i in range(m + 1, d):
+                system[m * d + k, eta_indexer(i) + m] = rotation[i, k]  # eta^i_m
+
+    return np.linalg.pinv(system) @ free_coefficients[:, np.newaxis]
 
 
 def resize_vector(vector):
@@ -171,55 +193,55 @@ if __name__ == '__main__':
     if args.gen:
         gen_data()
 
-    dataset = PNPset()
-    if args.one:
-        train_ds = dataset
-        val_ds = dataset
-    else:
-        train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
-    train_dl = DataLoader(train_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
-    val_dl = DataLoader(val_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
-
-    model = resnet50()
-    model.fc = nn.Linear(model.fc.in_features, 18)
-    model = model.double().to(device)
-
-    criterion = nn.L1Loss()
-    optimizer = Adam(model.parameters(), lr=0.1)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5)
-
-    for e in range(EPOCHS):
-        print(f'===Epoch {e + 1}===')
-        running_loss = 0.0
-
-        # Training epoch
-        for i, systems in enumerate(train_dl):
-            optimizer.zero_grad()
-            flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64).to(device)
-            out = model(
-                nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(torch.float64).to(
-                    device))
-            resized = resize_vector(out)
-            values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
-            loss = criterion(values, torch.zeros_like(values).to(device))
-            loss.backward()
-            optimizer.step()
-            print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
-
-        loss_sum = 0
-
-        with torch.no_grad():
-            for i, systems in enumerate(val_dl):
-                flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64)
-                out = model(nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(
-                    torch.float64).to(device))
-                resized = resize_vector(out).to(device)
-                values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
-                loss = criterion(values, torch.zeros_like(values).to(device))
-                loss_sum += 0
-                print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
-                scheduler.step(loss)
-
-        # lr_scheduler.step(loss_sum)
-
-        torch.save(model.state_dict(), f'solver{e}.pth')
+    # dataset = PNPset()
+    # if args.one:
+    #     train_ds = dataset
+    #     val_ds = dataset
+    # else:
+    #     train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
+    # train_dl = DataLoader(train_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
+    # val_dl = DataLoader(val_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
+    #
+    # model = resnet50()
+    # model.fc = nn.Linear(model.fc.in_features, 18)
+    # model = model.double().to(device)
+    #
+    # criterion = nn.L1Loss()
+    # optimizer = Adam(model.parameters(), lr=0.1)
+    # scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5)
+    #
+    # for e in range(EPOCHS):
+    #     print(f'===Epoch {e + 1}===')
+    #     running_loss = 0.0
+    #
+    #     # Training epoch
+    #     for i, systems in enumerate(train_dl):
+    #         optimizer.zero_grad()
+    #         flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64).to(device)
+    #         out = model(
+    #             nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(torch.float64).to(
+    #                 device))
+    #         resized = resize_vector(out)
+    #         values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
+    #         loss = criterion(values, torch.zeros_like(values).to(device))
+    #         loss.backward()
+    #         optimizer.step()
+    #         print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
+    #
+    #     loss_sum = 0
+    #
+    #     with torch.no_grad():
+    #         for i, systems in enumerate(val_dl):
+    #             flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64)
+    #             out = model(nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(
+    #                 torch.float64).to(device))
+    #             resized = resize_vector(out).to(device)
+    #             values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
+    #             loss = criterion(values, torch.zeros_like(values).to(device))
+    #             loss_sum += 0
+    #             print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
+    #             scheduler.step(loss)
+    #
+    #     # lr_scheduler.step(loss_sum)
+    #
+    #     torch.save(model.state_dict(), f'solver{e}.pth')
