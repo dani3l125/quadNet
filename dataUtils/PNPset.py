@@ -11,13 +11,13 @@ from multiprocessing import Process
 import glob
 import yaml
 
-with open(r'config.yml', 'r') as cfg:
+with open(r'PNPData/config.yml', 'r') as cfg:
     cfg = yaml.load(cfg, Loader=yaml.FullLoader)
 
 class PNPset(Dataset):
     def __init__(self):
-        self.s_paths = glob.glob(cfg["DATASET"]["NAME"]+'\\*\\*\\system.npy')
-        self.l_paths = glob.glob(cfg["DATASET"]["NAME"] + '\\*\\*\\labels.npy')
+        self.s_paths = glob.glob(cfg["DATASET"]["NAME"]+'/*/*/system.npy')
+        self.l_paths = glob.glob(cfg["DATASET"]["NAME"] + '/*/*/labels.npy')
         self.samples = [torch.tensor(np.load(path)) for path in self.s_paths]
         self.labels = [torch.tensor(np.load(path)) for path in self.l_paths]
         self.dim = self.samples[0].shape[0]
