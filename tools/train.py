@@ -21,6 +21,8 @@ parser.add_argument('--bs', type=int, default=64,
                     help='batch size')
 parser.add_argument('--unsup', type=int, default=0,
                     help='weather to use labels or distance from 0')
+parser.add_argument('--name', type=str, default='',
+                    help='of graphs')
 
 args = parser.parse_args()
 
@@ -157,11 +159,11 @@ def train():
         plt.figure()
         plt.title('training loss')
         plt.plot(losses[0, :e], losses[1, :e])
-        plt.savefig('train.png')
+        plt.savefig(f'train{args.name}.png')
         plt.figure()
         plt.title('validation loss')
         plt.plot(losses[0, :e], losses[2, :e])
-        plt.savefig('val.png')
+        plt.savefig(f'val{args.name}.png')
 
 
 if __name__ == "__main__":
