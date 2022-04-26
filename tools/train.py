@@ -1,9 +1,31 @@
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
-import dataUtils.DeviceDataLoader as DDL
 from dataUtils.MyDataSet import *
-from models.PiNet import PiNet
 import matplotlib.pyplot as plt
+from dataUtils import PNPset
+import torch.nn as nn
+from torchvision.models import resnet50
+from torch.utils.data import random_split
+import argparse
+from torch.optim import Adam, lr_scheduler
+from PNPData.PNP import resize_vector
+import matplotlib.pyplot as plt
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--gen', type=int, default=0,
+                    help='Generate data if needed (random point clouds)')
+parser.add_argument('--one', type=int, default=0,
+                    help='an integer for the accumulator')
+parser.add_argument('--bs', type=int, default=64,
+                    help='batch size')
+parser.add_argument('--unsup', type=int, default=0,
+                    help='weather to use labels or distance from 0')
+
+args = parser.parse_args()
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+EPOCHS = 500
 
 r_min = -10000.0
 r_max = 10000.0
@@ -68,48 +90,78 @@ def plot_accuracies(history):
 
 
 def train():
-    # Initialize dataUtils
-    print("Creating dataset...")
-    genData(data_size)
-    print("Dataset is created")
+    dataset = PNPset.PNPset()
+    if args.one:
+        train_ds = dataset
+        val_ds = dataset
+    else:
+        train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
+    train_dl = DataLoader(train_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
+    val_dl = DataLoader(val_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
 
-    dataset = Quadset(data_size)
+    model = resnet50()
+    model.fc = nn.Linear(model.fc.in_features, 18)
+    model = model.double().to(device)
 
-    train_ds, val_ds = torch.utils.data.random_split(dataset, (data_size - val_size, val_size))
+    criterion = nn.L1Loss()
+    optimizer = Adam(model.parameters(), lr=0.1)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5)
 
-    # Initialize data loaders
-    train_dl = torch.utils.data.DataLoader(train_ds,
-                                           batch_size=batch_size,
-                                           shuffle=True,
-                                           num_workers=4,
-                                           pin_memory=False
-                                           )
+    losses = np.zeros((3, EPOCHS))
 
-    val_dl = torch.utils.data.DataLoader(val_ds,
-                                         batch_size=batch_size,
-                                         shuffle=True,
-                                         num_workers=4,
-                                         pin_memory=False
-                                         )
+    for e in range(EPOCHS):
+        print(f'===Epoch {e + 1}===')
+        loss_mean = 0
 
-    # Initialize model
-    model = PiNet(degree=degree,
-                  in_size=3,
-                    out_size=2,
-                    )
 
-    # use GPU only if available
-    device = DDL.get_default_device()
-    train_dl = DDL.DeviceDataLoader(train_dl, device)
-    val_dl = DDL.DeviceDataLoader(val_dl, device)
-    DDL.to_device(model, device)
+        # Training epoch
+        for i, systems in enumerate(train_dl):
+            optimizer.zero_grad()
+            flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64).to(device)
+            out = model(
+                nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(torch.float64).to(
+                    device))
+            resized = resize_vector(out)
+            values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
+            loss = criterion(values, torch.zeros_like(values).to(device))
+            loss.backward()
+            optimizer.step()
+            print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
+            loss_mean = ((loss_mean * i) + loss) / (i + 1)
 
-    # Perform training and visualize result
-    history = fit(num_epochs, lr, model, train_dl, val_dl, opt_func, schedule_func)
-    plot_accuracies(history)
+        losses[0, i] = i+1
+        losses[1, i] = loss_mean
+        loss_mean = 0
 
-    # save the model
-    torch.save(model.state_dict(), 'QuadNet.pth')
+        with torch.no_grad():
+            for i, (systems, labels) in enumerate(val_dl):
+                flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64)
+                out = model(nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(
+                    torch.float64).to(device))
+                if args.unsup:
+                    loss = criterion(values, torch.zeros_like(values).to(device))
+                    resized = resize_vector(out).to(device)
+                    values = torch.matmul(systems.type(torch.float64).to(device),
+                                          resized.T.type(torch.float64).to(device))
+                else:
+                    loss = criterion(out, labels)
+                loss_mean = ((loss_mean * i) + loss) / (i + 1)
+                print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
+                scheduler.step(loss)
+
+        scheduler.step(loss_mean)
+        losses[2, i] = loss_mean
+
+        torch.save(model.state_dict(), f'solver{e}.pth')
+
+        plt.figure()
+        plt.title('training loss')
+        plt.plot(losses[0, :e], losses[1, :e])
+        plt.savefig('train.png')
+        plt.figure()
+        plt.title('validation loss')
+        plt.plot(losses[0, :e], losses[2, :e])
+        plt.savefig('val.png')
 
 
 if __name__ == "__main__":
