@@ -16,8 +16,10 @@ with open(r'config.yml', 'r') as cfg:
 
 class PNPset(Dataset):
     def __init__(self):
-        self.paths = glob.glob(cfg["DATASET"]["NAME"]+'\\*\\*\\system.npy')
-        self.samples = [torch.tensor(np.load(path)) for path in self.paths[:200]]
+        self.s_paths = glob.glob(cfg["DATASET"]["NAME"]+'\\*\\*\\system.npy')
+        self.l_paths = glob.glob(cfg["DATASET"]["NAME"] + '\\*\\*\\labels.npy')
+        self.samples = [torch.tensor(np.load(path)) for path in self.s_paths]
+        self.labels = [torch.tensor(np.load(path)) for path in self.l_paths]
         self.dim = self.samples[0].shape[0]
         self.coefficients = self.samples[0].shape[1]
 
@@ -26,10 +28,7 @@ class PNPset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        return self.samples[idx]
-
-    def getData(self, size=100000):
-        return
+        return self.samples[idx], self.labels[idx]
 
 
 if __name__ == '__main__':

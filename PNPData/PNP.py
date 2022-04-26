@@ -18,11 +18,13 @@ from scipy.special import comb
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--gen', type=int, default=0,
-                    help='an integer for the accumulator')
+                    help='Generate data if needed (random point clouds)')
 parser.add_argument('--one', type=int, default=0,
                     help='an integer for the accumulator')
-parser.add_argument('--batch_size', type=int, default=64,
-                    help='an integer for the accumulator')
+parser.add_argument('--bs', type=int, default=64,
+                    help='batch size')
+parser.add_argument('--unsup', type=int, default=0,
+                    help='weather to use labels or distance from 0')
 
 args = parser.parse_args()
 
@@ -34,7 +36,7 @@ def ncr(n, r):
     return comb(n, r, exact=True)
 
 
-with open(r'config.yml', 'r') as cfg:
+with open(r'PNPData/config.yml', 'r') as cfg:
     cfg = yaml.load(cfg, Loader=yaml.FullLoader)
 
 
@@ -86,7 +88,7 @@ def generate_rot_tr(p_points: np.ndarray, thread: int, index: int):
         np.save(path.join(file_path, 'translation.npy'), translation)
         np.save(path.join(file_path, 'system.npy'),
                 get_pol_system(q_points=q_points, p_points=p_points))
-        np.save(path.join((file_path, 'labels.npy'), labels))
+        np.save(path.join(file_path, 'labels.npy'), labels)
 
 
 class Indexer:
@@ -231,20 +233,24 @@ if __name__ == '__main__':
             optimizer.step()
             print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
 
-        loss_sum = 0
+        loss_mean = 0
 
         with torch.no_grad():
-            for i, systems in enumerate(val_dl):
+            for i, (systems, labels) in enumerate(val_dl):
                 flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64)
                 out = model(nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(
                     torch.float64).to(device))
-                resized = resize_vector(out).to(device)
-                values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
-                loss = criterion(values, torch.zeros_like(values).to(device))
-                loss_sum += 0
+                if args.unsup:
+                    loss = criterion(values, torch.zeros_like(values).to(device))
+                    resized = resize_vector(out).to(device)
+                    values = torch.matmul(systems.type(torch.float64).to(device),
+                                          resized.T.type(torch.float64).to(device))
+                else:
+                    loss = criterion(out, labels)
+                loss_mean = ((loss_mean * i) + loss ) / (i + 1)
                 print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
                 scheduler.step(loss)
 
-        # lr_scheduler.step(loss_sum)
+        scheduler.step(loss_mean)
 
         torch.save(model.state_dict(), f'solver{e}.pth')
