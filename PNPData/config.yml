@@ -3,5 +3,5 @@ DATASET:
   POINTS: 2000
   SIZE: 200
   DIMENSION: 3
-  NAME: "PNP3"
+  NAME: "../full_pnp_data"
   THREADS: 10
