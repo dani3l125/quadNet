@@ -1,7 +1,7 @@
 DATASET:
-  EPOCHS: 10
+  EPOCHS: 20
   POINTS: 2000
-  SIZE: 200
+  SIZE: 300
   DIMENSION: 3
-  NAME: "../full_pnp_data"
-  THREADS: 10
+  NAME: "full_pnp_data"
+  THREADS: 20
