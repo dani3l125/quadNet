@@ -158,7 +158,7 @@ def get_pol_system(*, q_points: np.ndarray, p_points: np.ndarray):
                 system[m * d + k + d + len(constraints_indexer), system_indexer[
                     d * d + d + d + eta_indexer(beta) + m, beta * d + k]] = 1  # r_betak * eta^beta_m
 
-    return system / np.linalg.norm(system, axis=1)
+    return system / np.linalg.norm(system, axis=1)[:, np.newaxis]
 
 
 def get_lagrange_coefficients(*, q_points: np.ndarray, p_points: np.ndarray, translation: np.ndarray,
