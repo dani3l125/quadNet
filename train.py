@@ -26,7 +26,6 @@ parser.add_argument('--unsup', type=int, default=0,
 parser.add_argument('--inf_data', type=bool, default=False,
                     help='train with infinite dataset')
 
-
 args = parser.parse_args()
 
 device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
@@ -45,6 +44,7 @@ save_epoch = 20
 opt_func = torch.optim.Adam
 schedule_func = torch.optim.lr_scheduler.StepLR
 
+
 def evaluate(model, val_loader, train_loader):
     with torch.no_grad():
         model.eval()
@@ -53,7 +53,8 @@ def evaluate(model, val_loader, train_loader):
 
 
 # TODO: add lr scheduler
-def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD, schedule_func=torch.optim.lr_scheduler.StepLR):
+def fit(epochs, lr, model, train_loader, val_loader, opt_f=torch.optim.SGD,
+        schedule_func=torch.optim.lr_scheduler.StepLR):
     history = []
     optimizer = opt_f(model.parameters(), lr)
     scheduler = schedule_func(optimizer, 75)
@@ -93,7 +94,6 @@ def plot_accuracies(history):
     plt.title('Roots estimation MSE vs. No. of epochs')
 
 
-
 def train():
     dataset = PNPset.PNPset()
     if args.one:
@@ -118,7 +118,6 @@ def train():
         print(f'===Epoch {e + 1}===')
         loss_mean = 0
 
-
         # Training epoch
         for i, (systems, labels) in enumerate(train_dl):
             optimizer.zero_grad()
@@ -137,7 +136,7 @@ def train():
             print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
             loss_mean = ((loss_mean * i) + loss) / (i + 1)
 
-        losses[0, i] = i+1
+        losses[0, i] = i + 1
         losses[1, i] = loss_mean
         loss_mean = 0
 
