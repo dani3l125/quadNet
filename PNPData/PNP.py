@@ -12,7 +12,6 @@ from torch.utils.data import random_split, DataLoader
 import torch
 import torch.nn as nn
 from torch.optim import Adam, SGD, lr_scheduler
-from dataUtils.PNPset import *
 from torchvision.models import resnet50
 from scipy.special import comb
 
@@ -197,60 +196,3 @@ def resize_vector(vector):
 if __name__ == '__main__':
     if args.gen:
         gen_data()
-
-    dataset = PNPset()
-    if args.one:
-        train_ds = dataset
-        val_ds = dataset
-    else:
-        train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
-    train_dl = DataLoader(train_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
-    val_dl = DataLoader(val_ds, batch_size=args.batch_size, pin_memory=True, num_workers=4)
-
-    model = resnet50()
-    model.fc = nn.Linear(model.fc.in_features, 18)
-    model = model.double().to(device)
-
-    criterion = nn.L1Loss()
-    optimizer = Adam(model.parameters(), lr=0.1)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5)
-
-    for e in range(EPOCHS):
-        print(f'===Epoch {e + 1}===')
-        running_loss = 0.0
-
-        # Training epoch
-        for i, systems in enumerate(train_dl):
-            optimizer.zero_grad()
-            flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64).to(device)
-            out = model(
-                nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(torch.float64).to(
-                    device))
-            resized = resize_vector(out)
-            values = torch.matmul(systems.type(torch.float64).to(device), resized.T.type(torch.float64).to(device))
-            loss = criterion(values, torch.zeros_like(values).to(device))
-            loss.backward()
-            optimizer.step()
-            print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
-
-        loss_mean = 0
-
-        with torch.no_grad():
-            for i, (systems, labels) in enumerate(val_dl):
-                flatten_in_sys = systems.reshape((systems.shape[0], -1)).type(torch.float64)
-                out = model(nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(
-                    torch.float64).to(device))
-                if args.unsup:
-                    loss = criterion(values, torch.zeros_like(values).to(device))
-                    resized = resize_vector(out).to(device)
-                    values = torch.matmul(systems.type(torch.float64).to(device),
-                                          resized.T.type(torch.float64).to(device))
-                else:
-                    loss = criterion(out, labels)
-                loss_mean = ((loss_mean * i) + loss) / (i + 1)
-                print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
-                scheduler.step(loss)
-
-        scheduler.step(loss_mean)
-
-        torch.save(model.state_dict(), f'solver{e}.pth')
