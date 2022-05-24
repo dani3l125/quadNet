@@ -158,7 +158,7 @@ def get_pol_system(*, q_points: np.ndarray, p_points: np.ndarray):
                 system[m * d + k + d + len(constraints_indexer), system_indexer[
                     d * d + d + d + eta_indexer(beta) + m, beta * d + k]] = 1  # r_betak * eta^beta_m
 
-    return system
+    return system / np.linalg.norm(system, axis=1)
 
 
 def get_lagrange_coefficients(*, q_points: np.ndarray, p_points: np.ndarray, translation: np.ndarray,
@@ -247,7 +247,7 @@ if __name__ == '__main__':
                                           resized.T.type(torch.float64).to(device))
                 else:
                     loss = criterion(out, labels)
-                loss_mean = ((loss_mean * i) + loss ) / (i + 1)
+                loss_mean = ((loss_mean * i) + loss) / (i + 1)
                 print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
                 scheduler.step(loss)
 
