@@ -9,7 +9,7 @@ from torchvision.models import resnet50
 from torch.utils.data import random_split
 import argparse
 from torch.optim import Adam, lr_scheduler
-from PNPData.PNP import resize_vector
+from PNPData.PNP import *
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -95,6 +95,82 @@ def plot_accuracies(history):
 
 
 def train():
+    dataset = PNPset.PNPset()
+    if args.one:
+        train_ds = dataset
+        val_ds = dataset
+    else:
+        train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
+    train_dl = DataLoader(train_ds, batch_size=args.bs, pin_memory=True, num_workers=4)
+    val_dl = DataLoader(val_ds, batch_size=args.bs, pin_memory=True, num_workers=4)
+
+    model = resnet50()
+    model.fc = nn.Linear(model.fc.in_features, 18)
+    model = model.double().to(device)
+
+    criterion = nn.L1Loss()
+    optimizer = Adam(model.parameters(), lr=0.1)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5)
+
+    losses = np.zeros((3, EPOCHS))
+
+    for e in range(EPOCHS):
+        print(f'===Epoch {e + 1}===')
+        loss_mean = 0
+
+        # Training epoch
+        for i, (systems, labels) in enumerate(train_dl):
+            optimizer.zero_grad()
+            out = model(
+                nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(torch.float64).to(
+                    device))
+            if args.unsup:
+                loss = criterion(values, torch.zeros_like(values).to(device))
+                resized = resize_vector(out).to(device)
+                values = torch.matmul(systems.type(torch.float64).to(device),
+                                      resized.T.type(torch.float64).to(device))
+            else:
+                loss = criterion(out, labels.to(device))
+            loss.backward()
+            optimizer.step()
+            print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
+            loss_mean = ((loss_mean * i) + loss) / (i + 1)
+
+        losses[0, i] = i + 1
+        losses[1, i] = loss_mean
+        loss_mean = 0
+
+        with torch.no_grad():
+            for i, (systems, labels) in enumerate(val_dl):
+                out = model(nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(
+                    torch.float64).to(device))
+                if args.unsup:
+                    loss = criterion(values, torch.zeros_like(values).to(device))
+                    resized = resize_vector(out).to(device)
+                    values = torch.matmul(systems.type(torch.float64).to(device),
+                                          resized.T.type(torch.float64).to(device))
+                else:
+                    loss = criterion(out, labels.to(device))
+                loss_mean = ((loss_mean * i) + loss) / (i + 1)
+                print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
+                scheduler.step(loss)
+
+        scheduler.step(loss_mean)
+        losses[2, i] = loss_mean
+
+        torch.save(model.state_dict(), f'solver{e}.pth')
+
+        plt.figure()
+        plt.title('training loss')
+        plt.plot(losses[0, :e], losses[1, :e])
+        plt.savefig(f'train{args.name}.png')
+        plt.figure()
+        plt.title('validation loss')
+        plt.plot(losses[0, :e], losses[2, :e])
+        plt.savefig(f'val{args.name}.png')
+
+
+def train_inf_data():
     dataset = PNPset.PNPset()
     if args.one:
         train_ds = dataset
