@@ -23,7 +23,7 @@ parser.add_argument('--bs', type=int, default=32,
                     help='batch size')
 parser.add_argument('--unsup', type=int, default=0,
                     help='weather to use labels or distance from 0')
-parser.add_argument('--inf_data', type=bool, default=False,
+parser.add_argument('--inf_data', type=int, default=0,
                     help='train with infinite dataset')
 
 args = parser.parse_args()
@@ -239,4 +239,7 @@ def train_inf_data():
 
 
 if __name__ == "__main__":
-    train_inf_data()
+    if args.inf_data:
+        train_inf_data()
+    else:
+        train()
