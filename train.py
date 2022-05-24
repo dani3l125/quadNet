@@ -170,23 +170,42 @@ def train():
         plt.savefig(f'val{args.name}.png')
 
 
+def generate_batch(batch_size=64):
+    systems_list = []
+    labels_list = []
+    for i in range(batch_size):
+        p_points = np.random.random_sample((cfg['DATASET']['POINTS'], cfg['DATASET']['DIMENSION']))
+        rotation = random_rotation.rvs(cfg['DATASET']['DIMENSION'])
+        translation = np.random.random_sample(cfg['DATASET']['DIMENSION'])
+        q_points = (rotation @ p_points.T + translation[:, np.newaxis]).T
+        lagrange = get_lagrange_coefficients(q_points=q_points, p_points=p_points, translation=translation,
+                                             rotation=rotation)
+        labels = np.concatenate([rotation.ravel(), translation, lagrange])
+        system = get_pol_system(q_points=q_points, p_points=p_points)
+        systems_list.append(system)
+        labels_list.append(labels)
+    return torch.from_numpy(np.stack(systems_list, axis=0)), torch.from_numpy(np.stack(labels_list, axis=0))
+
+
 def train_inf_data():
     model = resnet50()
     model.fc = nn.Linear(model.fc.in_features, 18)
     model = model.double().to(device)
 
+    n_batches = 20000
+
     criterion = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=0.1)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5)
+    # scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5)
 
-    losses = np.zeros((3, EPOCHS))
+    losses = np.zeros((2, EPOCHS))
 
     for e in range(EPOCHS):
         print(f'===Epoch {e + 1}===')
         epoch_loss = 0
-        n_batches = 0
         # Training epoch
-        for i, (systems, labels) in enumerate(train_dl):
+        for i in range(n_batches):
+            systems, labels = generate_batch(batch_size=args.bs)
             optimizer.zero_grad()
             out = model(
                 nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(torch.float64).to(
@@ -202,14 +221,10 @@ def train_inf_data():
             optimizer.step()
             print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
             epoch_loss += loss
-            n_batches += 1
 
         epoch_loss /= n_batches
         losses[0, e] = e + 1
         losses[1, e] = epoch_loss
-        epoch_loss = 0
-
-        losses[2, e] = 0
 
         torch.save(model.state_dict(), f'solver{e}.pth')
 
@@ -224,4 +239,4 @@ def train_inf_data():
 
 
 if __name__ == "__main__":
-    train()
+    train_inf_data()
