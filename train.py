@@ -136,8 +136,8 @@ def train():
             print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
             loss_mean = ((loss_mean * i) + loss) / (i + 1)
 
-        losses[0, i] = i + 1
-        losses[1, i] = loss_mean
+        losses[0, e] = e + 1
+        losses[1, e] = loss_mean
         loss_mean = 0
 
         with torch.no_grad():
@@ -153,10 +153,10 @@ def train():
                     loss = criterion(out, labels.to(device))
                 loss_mean = ((loss_mean * i) + loss) / (i + 1)
                 print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
-                scheduler.step(loss)
+            scheduler.step(loss_mean)
 
         scheduler.step(loss_mean)
-        losses[2, i] = loss_mean
+        losses[2, e] = loss_mean
 
         torch.save(model.state_dict(), f'solver{e}.pth')
 
@@ -171,15 +171,6 @@ def train():
 
 
 def train_inf_data():
-    dataset = PNPset.PNPset()
-    if args.one:
-        train_ds = dataset
-        val_ds = dataset
-    else:
-        train_ds, val_ds = random_split(dataset, (int(0.8 * len(dataset)), int(0.2 * len(dataset))))
-    train_dl = DataLoader(train_ds, batch_size=args.bs, pin_memory=True, num_workers=4)
-    val_dl = DataLoader(val_ds, batch_size=args.bs, pin_memory=True, num_workers=4)
-
     model = resnet50()
     model.fc = nn.Linear(model.fc.in_features, 18)
     model = model.double().to(device)
@@ -192,8 +183,8 @@ def train_inf_data():
 
     for e in range(EPOCHS):
         print(f'===Epoch {e + 1}===')
-        loss_mean = 0
-
+        epoch_loss = 0
+        n_batches = 0
         # Training epoch
         for i, (systems, labels) in enumerate(train_dl):
             optimizer.zero_grad()
@@ -210,29 +201,15 @@ def train_inf_data():
             loss.backward()
             optimizer.step()
             print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
-            loss_mean = ((loss_mean * i) + loss) / (i + 1)
+            epoch_loss += loss
+            n_batches += 1
 
-        losses[0, i] = i + 1
-        losses[1, i] = loss_mean
-        loss_mean = 0
+        epoch_loss /= n_batches
+        losses[0, e] = e + 1
+        losses[1, e] = epoch_loss
+        epoch_loss = 0
 
-        with torch.no_grad():
-            for i, (systems, labels) in enumerate(val_dl):
-                out = model(nn.functional.pad(systems.unsqueeze(1).repeat(1, 3, 1, 1), (17, 17, 103, 103)).type(
-                    torch.float64).to(device))
-                if args.unsup:
-                    loss = criterion(values, torch.zeros_like(values).to(device))
-                    resized = resize_vector(out).to(device)
-                    values = torch.matmul(systems.type(torch.float64).to(device),
-                                          resized.T.type(torch.float64).to(device))
-                else:
-                    loss = criterion(out, labels.to(device))
-                loss_mean = ((loss_mean * i) + loss) / (i + 1)
-                print(f'Epoch:{e + 1}, Batch:{i + 1:5d}, Loss: {loss.item():.3f}')
-                scheduler.step(loss)
-
-        scheduler.step(loss_mean)
-        losses[2, i] = loss_mean
+        losses[2, e] = 0
 
         torch.save(model.state_dict(), f'solver{e}.pth')
 
