@@ -239,7 +239,4 @@ def train_inf_data():
 
 
 if __name__ == "__main__":
-    if args.inf_data:
-        train_inf_data()
-    else:
-        train()
+    train_inf_data()
