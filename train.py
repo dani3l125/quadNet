@@ -28,7 +28,7 @@ parser.add_argument('--inf_data', type=int, default=0,
 
 args = parser.parse_args()
 
-device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 EPOCHS = 500
 
 r_min = -10000.0
