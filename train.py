@@ -192,7 +192,7 @@ def train_inf_data():
     model.fc = nn.Linear(model.fc.in_features, 18)
     model = model.double().to(device)
 
-    n_batches = 20000
+    n_batches = 1000
 
     criterion = nn.L1Loss()
     optimizer = Adam(model.parameters(), lr=0.1)
@@ -232,10 +232,6 @@ def train_inf_data():
         plt.title('training loss')
         plt.plot(losses[0, :e], losses[1, :e])
         plt.savefig(f'train{args.name}.png')
-        plt.figure()
-        plt.title('validation loss')
-        plt.plot(losses[0, :e], losses[2, :e])
-        plt.savefig(f'val{args.name}.png')
 
 
 if __name__ == "__main__":
