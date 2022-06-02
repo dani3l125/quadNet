@@ -13,6 +13,8 @@ from PNPData.PNP import *
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--func', type=int, default=0,
+                    help='Activation function: none/relu/hardshrink/tanhshrink')
 parser.add_argument('--name', type=int, default=0,
                     help='of graphs')
 parser.add_argument('--gen', type=int, default=0,
@@ -30,6 +32,16 @@ args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 EPOCHS = 500
+
+activ_func = nn.ReLU()
+if args.func == 'none':
+    activ_func = nn.Identity()
+elif args.func == 'hardshrink':
+    activ_func = nn.Hardshrink()
+elif args.func == 'tanhshrink':
+    activ_func = nn.Tanhshrink()
+
+
 
 r_min = -10000.0
 r_max = 10000.0
@@ -190,6 +202,7 @@ def generate_batch(batch_size=64):
 def train_inf_data():
     model = resnet50()
     model.fc = nn.Linear(model.fc.in_features, 18)
+    model.relu = activ_func
     model = model.double().to(device)
 
     n_batches = 1000
@@ -226,12 +239,13 @@ def train_inf_data():
         losses[0, e] = e + 1
         losses[1, e] = epoch_loss
 
-        torch.save(model.state_dict(), f'solver{e}.pth')
+        if e%50 == 0:
+            torch.save(model.state_dict(), f'solver{e}.pth')
 
         plt.figure()
         plt.title('training loss')
         plt.plot(losses[0, :e], losses[1, :e])
-        plt.savefig(f'train{args.name}.png')
+        plt.savefig(f'train_{args.func}.png')
 
 
 if __name__ == "__main__":
