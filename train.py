@@ -33,13 +33,13 @@ args = parser.parse_args()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 EPOCHS = 500
 
-activ_func = nn.ReLU()
-if args.func == 'none':
-    activ_func = nn.Identity()
-elif args.func == 'hardshrink':
-    activ_func = nn.Hardshrink()
-elif args.func == 'tanhshrink':
-    activ_func = nn.Tanhshrink()
+activ_func = nn.Identity()
+# if args.func == 'none':
+#     activ_func = nn.Identity()
+# elif args.func == 'hardshrink':
+#     activ_func = nn.Hardshrink()
+# elif args.func == 'tanhshrink':
+#     activ_func = nn.Tanhshrink()
 
 
 
