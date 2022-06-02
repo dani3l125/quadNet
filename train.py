@@ -13,7 +13,7 @@ from PNPData.PNP import *
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--func', type=int, default=0,
+parser.add_argument('--func', type=str, default='relu',
                     help='Activation function: none/relu/hardshrink/tanhshrink')
 parser.add_argument('--name', type=int, default=0,
                     help='of graphs')
