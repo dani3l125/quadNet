@@ -203,6 +203,7 @@ def train_inf_data():
     model = resnet50()
     model.fc = nn.Linear(model.fc.in_features, 18)
     model.relu = activ_func
+    model.maxpool = nn.Identity()
     model = model.double().to(device)
 
     n_batches = 1000
