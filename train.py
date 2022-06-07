@@ -246,7 +246,7 @@ def train_inf_data():
         plt.figure()
         plt.title('training loss')
         plt.plot(losses[0, :e], losses[1, :e])
-        plt.savefig(f'train_{args.func}.png')
+        plt.savefig(f'train_conv.png')
 
 
 if __name__ == "__main__":
