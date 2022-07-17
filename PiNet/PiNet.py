@@ -28,9 +28,9 @@ class PiNet(nn.Module):
         self.weights_matrices = nn.ParameterList(self.weights_matrices)
 
     def forward(self, input):
-
+        device = next(self.parameters()).device
         z_n = input.T
-        out = torch.matmul(self.weights_matrices[0], torch.ones(1, input.size()[0], dtype=torch.float64, device='cuda'))
+        out = torch.matmul(self.weights_matrices[0], torch.ones(1, input.size()[0], dtype=torch.float64, device=device))
         for n in self.degrees:
             out = torch.add(out, self.weights_matrices[n].mm(z_n))
             # out = torch.add(out, self.weights_matrices[n].mm(z_n))
@@ -38,6 +38,7 @@ class PiNet(nn.Module):
         return out.T
 
     def get_losses(self, batch, val=False):
+        device = next(self.parameters()).device
         parameters = batch
         # values = values.flatten()
         out = self(parameters)
@@ -46,11 +47,11 @@ class PiNet(nn.Module):
             return self.loss(torch.min(torch.abs(torch.sum(torch.stack(
                 [parameters[:, i].unsqueeze(axis=1) * torch.pow(out, i) for i in range(parameters.shape[1])]),
                 dim=0).flatten())),
-                             torch.zeros(device="cuda", size=(1, 1)).squeeze())
+                             torch.zeros(device=device, size=(1, 1)).squeeze())
         return self.loss(torch.sum(
             torch.stack([parameters[:, i].unsqueeze(axis=1) * torch.pow(out, i) for i in range(parameters.shape[1])]),
             dim=0).flatten(),
-                         torch.zeros(device="cuda", size=(1, out.size()[0] * out.size()[1])).squeeze())
+                         torch.zeros(device=device, size=(1, out.size()[0] * out.size()[1])).squeeze())
 
     def training_step(self, batch):
         return self.get_losses(batch)

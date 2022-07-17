@@ -42,7 +42,6 @@ activ_func = nn.Tanhshrink()
 #     activ_func = nn.Tanhshrink()
 
 
-
 r_min = -10000.0
 r_max = 10000.0
 data_size = 100  # 3 * 10e+6
@@ -240,7 +239,7 @@ def train_inf_data():
         losses[0, e] = e + 1
         losses[1, e] = epoch_loss
 
-        if e%50 == 0:
+        if e % 50 == 0:
             torch.save(model.state_dict(), f'solver{e}.pth')
 
         plt.figure()

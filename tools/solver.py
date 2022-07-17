@@ -1,8 +1,7 @@
-import torch
 from torch.utils.data import DataLoader
 import dataUtils.DeviceDataLoader as DDL
 from dataUtils.MyDataSet import *
-from models.PiNet import PiNet
+from PiNet.PiNet import PiNet
 import matplotlib.pyplot as plt
 
 with open("config.yml", "r") as cfg:
