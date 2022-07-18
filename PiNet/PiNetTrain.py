@@ -64,6 +64,6 @@ if __name__ == '__main__':
     except FileNotFoundError:
         pass
     with open(file_name, 'w') as output_file:
-        model = PiNet(12, 3, 2, output_file)
+        model = PiNet(5, 3, 2, output_file)
         model.to('cuda')
         train_pinet(model)

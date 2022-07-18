@@ -35,8 +35,12 @@ def ncr(n, r):
     return comb(n, r, exact=True)
 
 
-with open(r'PNPData/config.yml', 'r') as cfg:
-    cfg = yaml.load(cfg, Loader=yaml.FullLoader)
+try:
+    with open(os.path.join('PNPData', 'config.yml'), 'r') as cfg:
+        cfg = yaml.load(cfg, Loader=yaml.FullLoader)
+except:
+    with open(os.path.join('..', 'PNPData', 'config.yml'), 'r') as cfg:
+        cfg = yaml.load(cfg, Loader=yaml.FullLoader)
 
 
 def gen_data(data_path: str = cfg["DATASET"]["NAME"]):
@@ -184,6 +188,7 @@ def get_lagrange_coefficients(*, q_points: np.ndarray, p_points: np.ndarray, tra
 
 
 def resize_vector(vector):
+    device = vector.device
     vector = torch.cat((vector, torch.ones((vector.shape[0], 1), device=device)), dim=-1)
     vector_indexer = Indexer(vector.shape[1])
     resized = torch.zeros((vector.shape[0], len(vector_indexer)), device=device)
